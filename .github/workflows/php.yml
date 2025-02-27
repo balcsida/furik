@@ -1,0 +1,54 @@
+name: Build Furik Plugin
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          tools: wp-cli
+          
+      - name: Install gettext
+        run: sudo apt-get install -y gettext
+        
+      - name: Generate .mo files
+        run: |
+          mkdir -p wordpress/furik-plugin/furik/lang
+          msgfmt -o wordpress/furik-plugin/furik/lang/furik-hu_HU.mo wordpress/furik-plugin/furik/lang/furik-hu_HU.po
+        
+      - name: Create plugin zip
+        run: |
+          cd wordpress/furik-plugin
+          zip -r furik.zip furik
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: furik-plugin
+          path: wordpress/furik-plugin/furik.zip
+          
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: wordpress/furik-plugin/furik.zip
+          name: Furik Plugin ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
