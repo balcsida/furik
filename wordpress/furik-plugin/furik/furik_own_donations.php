@@ -59,7 +59,7 @@ class Own_Donations_List extends WP_List_Table {
 
 		if ($item['transaction_type'] == 3) {
 			$line = __('Recurring monthly donation', 'furik'). "<br />";
-			$sql = "SELECT time FROM {$wpdb->prefix}furik_transactions WHERE transaction_status=".FURIK_STATUS_FUTURE." AND parent=".$item['id']." ORDER BY time LIMIT 1";
+			$sql = "SELECT time FROM {$wpdb->prefix}furik_transactions WHERE transaction_status=".FURIK_STATUS_FUTURE." AND parent=".$item['id']." ORDER BY time";
 			$next = $wpdb->get_var($sql);
 			if ($next) {
 				$line .= __('Next', 'furik') . ": " . $next . "<br />";
