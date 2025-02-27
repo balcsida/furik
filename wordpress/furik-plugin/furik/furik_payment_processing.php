@@ -26,7 +26,7 @@ function furik_process_ipn() {
 
 	if ($trx->isIpnSignatureCheck($json)) {
 		$content = json_decode($trx->checkOrSetToJson($json), true);
-		furik_update_transaction_status($content['orderRef'], FURIK_STATUS_IPN_SUCCESSFUL);
+		furik_update_transaction_status($content['orderRef'], FURIK_STATUS_IPN_SUCCESSFUL, $content['transactionId']);
 		$trx->runIpnConfirm();
 		die();
 	}
@@ -87,7 +87,7 @@ function furik_process_payment() {
  * Prepares an automatic redirect link to SimplePay with the posted data
  */
 function furik_process_payment_form() {
-	global $wpdb, $furik_name_order_eastern;
+	global $wpdb, $furik_name_order_eastern, $furik_production_system;
 
 	if (!$_POST['furik_form_accept']) {
 		_e('Please accept the data transmission agreement.', 'furik');
@@ -125,18 +125,20 @@ function furik_process_payment_form() {
 
 	if ($recurring) {
 		if ($type == 0) {
-			$type = 3;
+			$type = FURIK_TRANSACTION_TYPE_RECURRING_REG;
 		}
 		elseif ($type == 1) {
-			$type = 5;
+			$type = FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG;
 		}
 	}
 
 	$wpdb->insert(
 		"{$wpdb->prefix}furik_transactions",
 		array(
-			'time' => current_time( 'mysql' ),
+			'time' => current_time('mysql'),
+			'transaction_time' => current_time('mysql'),
 			'transaction_type' => $type,
+			'production_system' => $furik_production_system ? 1 : 0,
 			'name' => $name,
 			'first_name' => $first_name,
 			'last_name' => $last_name,
@@ -167,65 +169,121 @@ function furik_process_payment_form() {
 		die(__('Database error. Please contact the site administrator.', 'furik'));
 	}
 
-	if (($type == 0) || ($type == 3)) {
-		furik_prepare_simplepay_redirect($local_id, $transactionId, $campaign, $amount, $email, $type == 3, $name);
+	if (($type == FURIK_TRANSACTION_TYPE_SIMPLEPAY) || ($type == FURIK_TRANSACTION_TYPE_RECURRING_REG)) {
+		furik_prepare_simplepay_redirect($local_id, $transactionId, $campaign, $amount, $email, $type == FURIK_TRANSACTION_TYPE_RECURRING_REG, $name);
 	}
-	elseif ($type == 1) {
+	elseif (($type == FURIK_TRANSACTION_TYPE_TRANSFER) || ($type == FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG)) {
 		furik_redirect_to_transfer_page($transactionId);
 	}
-	elseif ($type == 2) {
+	elseif ($type == FURIK_TRANSACTION_TYPE_CASH) {
 		furik_redirect_to_thank_you_cash($transactionId);
 	}
 }
 
 function furik_process_recurring() {
 	global $wpdb;
-	$sql = "SELECT *
+
+	require_once "SimplePayV21.php";
+	require_once "SimplePayV21CardStorage.php";
+
+	$sql = "SELECT rec.*
 		FROM
-			{$wpdb->prefix}furik_transactions
-		WHERE time <= now()
-			AND transaction_status in (".FURIK_STATUS_FUTURE.")
+			{$wpdb->prefix}furik_transactions AS rec
+			JOIN {$wpdb->prefix}furik_transactions AS ptr ON (rec.parent=ptr.id)
+		WHERE rec.time <= now()
+			AND rec.transaction_status in (".FURIK_STATUS_FUTURE.")
+			AND ptr.transaction_status in (1, 10)
 		ORDER BY time DESC";
 
 	$result = $wpdb->get_results($sql);
+
+	$count = 0;
+
 	echo "<pre>";
+
 	foreach ($result as $payment) {
-		require_once "SimplePayV21.php";
-		require_once "SimplePayV21CardStorage.php";
+		$count++;
 
-		// TODO: Double check the validity of the payment by checking if more than 25 days happened since last payment
+		if (isset($_GET['n']) && $count > $_GET['n']) {
+			echo "Skipping other payments due to reaching the limit.\n";
 
-		echo $payment->amount ." ". $payment->time."\n";
+			break;
+		}
+		echo $payment->id ." ". $payment->amount ." ". $payment->time;
 
-		$trx = new SimplePayDorecurring;
+		$previous_date = $wpdb->get_var($wpdb->prepare(
+			"SELECT transaction_time
+				FROM {$wpdb->prefix}furik_transactions
+				WHERE transaction_time is not null
+					AND (id = $payment->parent OR parent = $payment->parent)
+				ORDER BY id DESC
+				LIMIT 1
+			"));
 
-		$trx->addConfig(furik_get_simple_config());
-		$trx->addData('orderRef', $payment->transaction_id);
-		$trx->addData('methods', array('CARD'));
-		$trx->addData('currency', 'HUF');
-		$trx->addData('total', $payment->amount);
-		$trx->addData('customerEmail', $payment->email);
-		$trx->addData('token', $payment->token);
-		$trx->runDorecurring();
+		if (!$previous_date) {
+			echo " &lt;- There was no previous transaction date, skipping the previous item on the list.\n";
 
-		$returnData = $trx->getReturnData();
+			continue;
+		}
 
-		furik_transaction_log($payment->transaction_id, serialize($returnData));
+		$time_diff = time() - strtotime($previous_date);
 
-		$newStatus = $returnData['total'] > 0 ? FURIK_STATUS_SUCCESSFUL : FURIK_STATUS_RECURRING_FAILED;
+		if ($time_diff < 60*60*24*25) {
+			echo " &lt;- is skipped as the previous payment was not done more than 25 days ago.\n";
 
-		$wpdb->update(
-			"{$wpdb->prefix}furik_transactions",
-			array("transaction_status" => $newStatus),
-			array("id" => $payment->id)
-		);
+			continue;
+		}
+
+
+		if (isset($_GET['runpayments'])) {
+			$trx = new SimplePayDorecurring;
+
+			$trx->addConfig(furik_get_simple_config());
+			$trx->addData('orderRef', $payment->transaction_id);
+			$trx->addData('methods', array('CARD'));
+			$trx->addData('currency', 'HUF');
+			$trx->addData('total', $payment->amount);
+			$trx->addData('customerEmail', $payment->email);
+			$trx->addData('token', $payment->token);
+			$trx->runDorecurring();
+
+			$returnData = $trx->getReturnData();
+
+			furik_transaction_log($payment->transaction_id, serialize($returnData));
+
+			$newStatus = $returnData['total'] > 0 ? FURIK_STATUS_SUCCESSFUL : FURIK_STATUS_RECURRING_FAILED;
+
+			echo " new status: ".$newStatus;
+
+			$wpdb->update(
+				"{$wpdb->prefix}furik_transactions",
+				array("transaction_status" => $newStatus,
+					"transaction_time" => date("Y-m-d H:i:s")),
+				array("id" => $payment->id)
+			);
+
+			if ($newStatus == FURIK_STATUS_RECURRING_FAILED) {
+				$failureCode = $returnData['errorCodes'][0];
+				if ($failureCode == 2063 || $failureCode == 2072) {
+					$wpdb->update(
+						"{$wpdb->prefix}furik_transactions",
+						array("transaction_status" => FURIK_STATUS_RECURRING_PAST_FAILED,
+							"transaction_time" => date("Y-m-d H:i:s")),
+						array("parent" => $payment->parent,
+							"transaction_status" => FURIK_STATUS_FUTURE)
+					);
+				}
+			}
+		}
+
+		echo "\n";
 	}
 
-	die("Processed recurring payments.");
+	die("Query finished.");
 }
 
 function furik_prepare_simplepay_redirect($local_id, $transactionId, $campaign, $amount, $email, $recurring = false, $name) {
-	global $wpdb;
+	global $wpdb, $furik_simplepay_ask_for_invoice_information, $furik_production_system;
 
 	require_once 'SimplePayV21.php';
 
@@ -238,7 +296,7 @@ function furik_prepare_simplepay_redirect($local_id, $transactionId, $campaign, 
 	$lu->addData('language', 'HU');
 	$lu->addData('currency', 'HUF');
 	$lu->addData('customerEmail', $email);
-	$lu->addData('maySelectInvoice', 'true');
+	$lu->addData('maySelectInvoice', $furik_simplepay_ask_for_invoice_information);
 	$lu->addData('methods', array('CARD'));
 	$lu->addData('total', $amount);
 	$lu->addData('url', $config['URL']);
@@ -290,6 +348,7 @@ function furik_prepare_simplepay_redirect($local_id, $transactionId, $campaign, 
 				array(
 					'time' => date("Y-m-d H:i:s", $time),
 					'transaction_type' => FURIK_TRANSACTION_TYPE_RECURRING_AUTO,
+					'production_system' => $furik_production_system ? 1 : 0,
 					'name' => $name,
 					'email' => $email,
 					'amount' => $amount,
@@ -385,7 +444,7 @@ function furik_get_simple_config() {
 }
 
 function furik_send_email_for_order($order_ref) {
-	global $furik_email_thanks_enabled;
+	global $furik_email_thanks_enabled, $furik_email_send_recurring_only;
 
 	if (!$furik_email_thanks_enabled) {
 		return;
@@ -410,7 +469,9 @@ function furik_send_email_for_order($order_ref) {
 
 	$body = ob_get_clean();
 
-	furik_send_email($furik_sender_address, $furik_sender_name, $transaction->email, $furik_email_subject, $body);
+	if (!$furik_email_send_recurring_only || !$transaction->recurring) {
+		furik_send_email($furik_sender_address, $furik_sender_name, $transaction->email, $furik_email_subject, $body);
+	}
 
 	if ($transaction->recurring) {
 		$random_password = furik_register_user($transaction->email);

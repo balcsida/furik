@@ -20,6 +20,8 @@ $furik_card_registration_statement_url = "card-registration-statement";
 $furik_data_transmission_declaration_url = "data-transmission-declaration";
 $furik_monthly_explanation_url = "monthly-donation";
 
+$furik_simplepay_ask_for_invoice_information = true;
+
 $furik_processing_recurring_secret = "aekah2Qu";
 
 $furik_enable_extra_fields = array("phone_number", "name_separation");
@@ -27,6 +29,11 @@ $furik_enable_extra_fields = array("phone_number", "name_separation");
 $furik_name_order_eastern = false;
 
 $furik_email_thanks_enabled = false;
+
+/**
+* If furik_email_send_recurring_only is set to true, only the recurring email is sent when a recurring donation was registered. If it's false, two emails are sent on recurring donations. Does not change the one time donation setup.
+*/
+$furik_email_send_recurring_only = false;
 
 /**
 * Set $furik_change_sender to true if you would like to change the from address in the outgoing e-mails. The address needs to be set in the email templates (tempates/furik_email_*).

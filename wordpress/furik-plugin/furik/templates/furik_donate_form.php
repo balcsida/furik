@@ -35,14 +35,25 @@ if ( ! defined( 'ABSPATH' ) ) exit;
             <input type="text" name="furik_form_name" id="furik_form_name" class="form-control" required="1"/>
         </div>
     <?php else : ?>
-        <div class="form-field form-group form-required">
-            <label for="furik_form_name"><?php echo __('Your first name', 'furik'); ?>:</label>
-            <input type="text" name="furik_form_first_name" id="furik_form_first_name" class="form-control" required="1"/>
-        </div>
-        <div class="form-field form-group form-required">
-            <label for="furik_form_name"><?php echo __('Your last name', 'furik'); ?>:</label>
-            <input type="text" name="furik_form_last_name" id="furik_form_last_name" class="form-control" required="1"/>
-        </div>
+        <?php if (!$args['furik_name_order_eastern']) : ?>
+            <div class="form-field form-group form-required">
+                <label for="furik_form_name"><?php echo __('Your first name', 'furik'); ?>:</label>
+                <input type="text" name="furik_form_first_name" id="furik_form_first_name" class="form-control" required="1"/>
+            </div>
+            <div class="form-field form-group form-required">
+                <label for="furik_form_name"><?php echo __('Your last name', 'furik'); ?>:</label>
+                <input type="text" name="furik_form_last_name" id="furik_form_last_name" class="form-control" required="1"/>
+            </div>
+        <?php else : ?>
+            <div class="form-field form-group form-required">
+                <label for="furik_form_name"><?php echo __('Your last name', 'furik'); ?>:</label>
+                <input type="text" name="furik_form_last_name" id="furik_form_last_name" class="form-control" required="1"/>
+            </div>
+            <div class="form-field form-group form-required">
+                <label for="furik_form_name"><?php echo __('Your first name', 'furik'); ?>:</label>
+                <input type="text" name="furik_form_first_name" id="furik_form_first_name" class="form-control" required="1"/>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php if (!isset($args['meta']['ANON_DISABLED'])) : ?>

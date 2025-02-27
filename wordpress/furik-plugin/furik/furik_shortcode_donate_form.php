@@ -3,7 +3,7 @@
  * WordPress shortcode: [furik_donate_form], paramters: amount.
  */
 function furik_shortcode_donate_form( $atts ) {
-	global $furik_card_registration_statement_url, $furik_data_transmission_declaration_url, $furik_monthly_explanation_url;
+	global $furik_card_registration_statement_url, $furik_data_transmission_declaration_url, $furik_monthly_explanation_url, $furik_name_order_eastern;
     $a = shortcode_atts( array(
 	   'amount' => '5000',
        'skip_message' => false,

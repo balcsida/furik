@@ -8,6 +8,7 @@ define("FURIK_STATUS_CASH_ADDED", 5);
 define("FURIK_STATUS_FUTURE", 6);
 define("FURIK_STATUS_IPN_SUCCESSFUL", 10);
 define("FURIK_STATUS_RECURRING_FAILED", 11);
+define("FURIK_STATUS_RECURRING_PAST_FAILED", 12);
 define("FURIK_STATUS_DISPLAYABLE", "1, 10");
 
 define("FURIK_TRANSACTION_TYPE_SIMPLEPAY", 0);
@@ -38,8 +39,10 @@ function furik_install() {
 	$sql_transactions = "CREATE TABLE {$wpdb->prefix}furik_transactions (
 		id int NOT NULL AUTO_INCREMENT,
 		time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
+		transaction_time datetime,
 		transaction_id varchar(100) NOT NULL,
 		transaction_type int DEFAULT 0,
+		production_system int,
 		name varchar(255),
 		first_name varchar(255),
 		last_name varchar(255),

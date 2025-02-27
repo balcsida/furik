@@ -59,7 +59,7 @@ class Own_Donations_List extends WP_List_Table {
 
 		if ($item['transaction_type'] == 3) {
 			$line = __('Recurring monthly donation', 'furik'). "<br />";
-			$sql = "SELECT time FROM {$wpdb->prefix}furik_transactions WHERE transaction_status=".FURIK_STATUS_FUTURE." AND parent=".$item['id']." ORDER BY time LIMIT 1";
+			$sql = "SELECT time FROM {$wpdb->prefix}furik_transactions WHERE transaction_status=".FURIK_STATUS_FUTURE." AND parent=".$item['id']." ORDER BY time";
 			$next = $wpdb->get_var($sql);
 			if ($next) {
 				$line .= __('Next', 'furik') . ": " . $next . "<br />";
@@ -214,9 +214,10 @@ class Own_Donations_List_Plugin {
 
 		if (isset($_GET['cancelRecurring']) && is_numeric($_GET['cancelRecurring'])) {
 			$user = wp_get_current_user();
+			$parent_id = $_GET['cancelRecurring'];
 
 			$sql = "SELECT vendor_ref FROM {$wpdb->prefix}furik_transactions
-				WHERE id=" . $_GET['cancelRecurring'] . " AND
+				WHERE id=$parent_id AND
 				transaction_id='" . esc_sql($_GET['transactionId']) . "' AND
 				email='" . esc_sql($user->user_email) . "'";
 
@@ -224,7 +225,7 @@ class Own_Donations_List_Plugin {
 				furik_cancel_recurring($vendor_ref);
 
 				$wpdb->query(
-					"DELETE FROM {$wpdb->prefix}furik_transactions WHERE parent=".$_GET['cancelRecurring']." AND transaction_status=".FURIK_STATUS_FUTURE
+					"DELETE FROM {$wpdb->prefix}furik_transactions WHERE parent=$parent_id AND transaction_status=".FURIK_STATUS_FUTURE
 				);
 			}
 		}

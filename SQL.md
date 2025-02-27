@@ -12,3 +12,6 @@ This should return empty results:
 
     SELECT * FROM `wp_furik_transactions` as a WHERE parent is not null and email != (select email from wp_furik_transactions where id=a.parent)
 
+### Database upgrade after adding the transaction_time column
+
+    UPDATE wp_furik_transactions SET transaction_time=time WHERE transaction_status != 6;
