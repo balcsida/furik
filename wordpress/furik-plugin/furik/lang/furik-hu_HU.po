@@ -297,7 +297,7 @@ msgstr "Egyelőre nem érkezett be támogatás. Legyél Te az első!"
 
 #: furik_shortcode_donations.php:54 templates/furik_donate_form.php:51
 msgid "Anonymous donation"
-msgstr "Aninom támogatás"
+msgstr "Anonim támogatás"
 
 #: furik_shortcode_donations.php:71 furik_shortcode_donations.php:75
 msgid "now"
