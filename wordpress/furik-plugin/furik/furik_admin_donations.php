@@ -53,6 +53,9 @@ class Donations_List extends WP_List_Table {
 				return __('Future donation', 'furik');
 			case FURIK_STATUS_RECURRING_FAILED:
 				return __('Recurring transaction failed', 'furik');
+			case FURIK_STATUS_RECURRING_PAST_FAILED:
+				return __('Past recurring transaction failed', 'furik');
+
 			default:
 				return __('Unknown', 'furik');
 		}
@@ -74,6 +77,7 @@ class Donations_List extends WP_List_Table {
 				return __('Recurring transfer (registration)', 'furik');
 			case FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_AUTO:
 				return __('Recurring transfer (automatic)', 'furik');
+
 			default:
 				return __('Unknown', 'furik');
 		}
@@ -108,7 +112,11 @@ class Donations_List extends WP_List_Table {
 			return "(tr.id = $parent_id OR tr.parent=$parent_id)";
 		}
 		else {
-			return "((transaction_status != ". FURIK_STATUS_FUTURE . ") or (transaction_status is null))";
+			return
+				"((transaction_status not in (" .
+					FURIK_STATUS_FUTURE . ", " .
+					FURIK_STATUS_RECURRING_PAST_FAILED . ")) or
+				 (transaction_status is null))";
 		}
 	}
 

@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Furik\n"
-"POT-Creation-Date: 2020-12-12 22:50+0100\n"
-"PO-Revision-Date: 2020-12-12 22:51+0100\n"
+"POT-Creation-Date: 2021-01-09 14:37+0100\n"
+"PO-Revision-Date: 2021-01-09 14:38+0100\n"
 "Last-Translator: \n"
 "Language-Team: Furik\n"
 "Language: hu_HU\n"
@@ -20,44 +20,44 @@ msgstr ""
 msgid "Donation"
 msgstr "Támogatás"
 
-#: furik_admin_donations.php:11 furik_admin_donations.php:193
-#: furik_admin_donations.php:228 furik_admin_recurring.php:11
+#: furik_admin_donations.php:11 furik_admin_donations.php:174
+#: furik_admin_donations.php:221 furik_admin_recurring.php:11
 #: furik_own_donations.php:11
 msgid "Donations"
 msgstr "Támogatások"
 
 #: furik_admin_donations.php:22 furik_admin_recurring.php:22
-#: furik_own_donations.php:22 furik_payment_processing.php:267
-#: furik_payment_processing.php:269 furik_shortcode_donate_form.php:43
+#: furik_own_donations.php:22 furik_payment_processing.php:296
+#: furik_payment_processing.php:298 furik_shortcode_donate_form.php:43
 msgid "General donation"
 msgstr "Általános támogatás"
 
-#: furik_admin_donations.php:33 furik_admin_recurring.php:37
+#: furik_admin_donations.php:33 furik_admin_recurring.php:51
 #: furik_own_donations.php:33
 msgid "Pending"
 msgstr "Folyamatban"
 
-#: furik_admin_donations.php:35 furik_admin_recurring.php:39
+#: furik_admin_donations.php:35 furik_admin_recurring.php:53
 #: furik_own_donations.php:35
 msgid "Successful, waiting for confirmation"
 msgstr "Sikeres fizetés, visszajelzésre vár"
 
-#: furik_admin_donations.php:37 furik_admin_recurring.php:41
+#: furik_admin_donations.php:37 furik_admin_recurring.php:55
 #: furik_own_donations.php:37
 msgid "Unsuccessful card payment"
 msgstr "Sikertelen kártyás fizetés"
 
-#: furik_admin_donations.php:41 furik_admin_recurring.php:45
+#: furik_admin_donations.php:41 furik_admin_recurring.php:59
 #: furik_own_donations.php:41
 msgid "Approve"
 msgstr "Jóváhagy"
 
-#: furik_admin_donations.php:49 furik_admin_recurring.php:53
+#: furik_admin_donations.php:49 furik_admin_recurring.php:67
 #: furik_own_donations.php:49
 msgid "Waiting for confirmation"
 msgstr "Visszajelzésre vár"
 
-#: furik_admin_donations.php:51 furik_admin_recurring.php:55
+#: furik_admin_donations.php:51 furik_admin_recurring.php:69
 #: furik_own_donations.php:51
 msgid "Successful and confirmed"
 msgstr "Sikeres és visszaigazolt"
@@ -66,104 +66,140 @@ msgstr "Sikeres és visszaigazolt"
 msgid "Future donation"
 msgstr "Jövőbeni támogatás"
 
-#: furik_admin_donations.php:55 furik_admin_donations.php:72
-#: furik_admin_recurring.php:57 furik_own_donations.php:53
-#: furik_own_donations.php:82
+#: furik_admin_donations.php:55
+msgid "Recurring transaction failed"
+msgstr "Sikertelen automatikus levonás"
+
+#: furik_admin_donations.php:57 furik_admin_donations.php:78
+#: furik_admin_recurring.php:71 furik_admin_recurring.php:83
+#: furik_own_donations.php:53 furik_own_donations.php:82
 msgid "Unknown"
 msgstr "Ismeretlen"
 
-#: furik_admin_donations.php:62 furik_own_donations.php:76
+#: furik_admin_donations.php:64 furik_admin_recurring.php:77
+#: furik_own_donations.php:76
 msgid "SimplePay Card"
 msgstr "SimplePay kártyás"
 
-#: furik_admin_donations.php:64 furik_own_donations.php:78
-#: templates/furik_donate_form.php:117
+#: furik_admin_donations.php:66 furik_admin_recurring.php:80
+#: furik_own_donations.php:78 templates/furik_donate_form.php:117
 msgid "Bank transfer"
 msgstr "Átutalás"
 
-#: furik_admin_donations.php:66 furik_own_donations.php:80
+#: furik_admin_donations.php:68 furik_own_donations.php:80
 msgid "Cash payment"
 msgstr "Készpénzes támogatás"
 
-#: furik_admin_donations.php:68
+#: furik_admin_donations.php:70
 msgid "Recurring (registration)"
 msgstr "Rendszeres támogatás (első alkalom)"
 
-#: furik_admin_donations.php:70
+#: furik_admin_donations.php:72
 msgid "Recurring (automatic)"
 msgstr "Rendszeres havi támogatás (automatikus levonás)"
 
-#: furik_admin_donations.php:120
+#: furik_admin_donations.php:74
+msgid "Recurring transfer (registration)"
+msgstr "Rendszeres átutalásos támogatás (első alkalom)"
+
+#: furik_admin_donations.php:76
+msgid "Recurring transfer (automatic)"
+msgstr "Rendszeres átutalásos támogatás (automatikus levonás)"
+
+#: furik_admin_donations.php:124
 msgid "No donations are avaliable."
 msgstr "Nincs támogatás rögzítve a rendszerben."
 
-#: furik_admin_donations.php:125 furik_admin_recurring.php:100
+#: furik_admin_donations.php:129 furik_admin_recurring.php:129
 msgid "ID"
 msgstr "Azonosító"
 
-#: furik_admin_donations.php:126 furik_own_donations.php:138
+#: furik_admin_donations.php:130 furik_own_donations.php:138
 msgid "Time"
 msgstr "Időpont"
 
-#: furik_admin_donations.php:127 furik_admin_recurring.php:102
+#: furik_admin_donations.php:131 furik_admin_recurring.php:131
 #: furik_own_donations.php:132
 msgid "Name"
 msgstr "Név"
 
-#: furik_admin_donations.php:128 furik_admin_recurring.php:103
+#: furik_admin_donations.php:132 furik_admin_recurring.php:132
 #: furik_own_donations.php:133
 msgid "E-mail"
 msgstr "E-mail"
 
-#: furik_admin_donations.php:131 furik_admin_recurring.php:106
+#: furik_admin_donations.php:135 furik_admin_recurring.php:136
 msgid "Phone Number"
 msgstr "Telefonszám"
 
-#: furik_admin_donations.php:134 furik_admin_recurring.php:109
+#: furik_admin_donations.php:138 furik_admin_recurring.php:139
 #: furik_own_donations.php:134
 msgid "Amount"
 msgstr "Összeg"
 
-#: furik_admin_donations.php:135 furik_own_donations.php:135
+#: furik_admin_donations.php:139 furik_admin_recurring.php:133
+#: furik_own_donations.php:135
 msgid "Type"
 msgstr "Típus"
 
-#: furik_admin_donations.php:136 furik_admin_recurring.php:111
+#: furik_admin_donations.php:140 furik_admin_recurring.php:141
 #: furik_campaigns.php:6 furik_own_donations.php:137
 msgid "Campaign"
 msgstr "Kampány"
 
-#: furik_admin_donations.php:137 furik_admin_recurring.php:112
+#: furik_admin_donations.php:141 furik_admin_recurring.php:142
+#: templates/furik_donate_form.php:70
+msgid "Message"
+msgstr "Üzenet"
+
+#: furik_admin_donations.php:142 furik_admin_recurring.php:143
 msgid "Anonymity"
 msgstr "Anonimitás"
 
-#: furik_admin_donations.php:138 furik_admin_recurring.php:113
+#: furik_admin_donations.php:143 furik_admin_recurring.php:144
 msgid "Newsletter Status"
 msgstr "Hírlevél állapota"
 
-#: furik_admin_donations.php:139 furik_admin_recurring.php:114
+#: furik_admin_donations.php:144 furik_admin_recurring.php:146
 #: furik_own_donations.php:139
 msgid "Status"
 msgstr "Állapot"
 
-#: furik_admin_donations.php:192
+#: furik_admin_donations.php:173
 msgid "Furik Donations"
 msgstr "Furik Támogatások"
 
-#: furik_admin_recurring.php:95
+#: furik_admin_recurring.php:32
+msgid "future donations"
+msgstr "jövőbeni támogatás"
+
+#: furik_admin_recurring.php:37
+#, php-format
+msgid "Last payment was recorded %d day(s) ago."
+msgstr "A legutóbbi átutalás %d napja volt rögzítve."
+
+#: furik_admin_recurring.php:40 furik_own_donations.php:69
+msgid "Expired or cancelled."
+msgstr "Lejárt vagy lemondott."
+
+#: furik_admin_recurring.php:124
 msgid "No recurring donations are avaliable."
 msgstr "Nincs ismétlődő támogatás a rendszerben."
 
-#: furik_admin_recurring.php:101
+#: furik_admin_recurring.php:130
 msgid "Registration time"
 msgstr "Regisztráció időpontja"
 
-#: furik_admin_recurring.php:110
+#: furik_admin_recurring.php:140
 msgid "Full amount"
 msgstr "Teljes összeg"
 
-#: furik_admin_recurring.php:167 furik_admin_recurring.php:168
-#: furik_admin_recurring.php:194
+#: furik_admin_recurring.php:145
+msgid "Registration status"
+msgstr "Regisztráció állapota"
+
+#: furik_admin_recurring.php:199 furik_admin_recurring.php:200
+#: furik_admin_recurring.php:237
 msgid "Recurring donations"
 msgstr "Rendszeres támogatások"
 
@@ -227,10 +263,6 @@ msgstr "Következő"
 msgid "Cancel future donations"
 msgstr "Jövőbeni támogatások lemondása"
 
-#: furik_own_donations.php:69
-msgid "Expired or cancelled."
-msgstr "Lejárt vagy lemondott."
-
 #: furik_own_donations.php:127
 msgid "No donations avaliable."
 msgstr "Nincs támogatás a rendszerben."
@@ -243,7 +275,7 @@ msgstr "Tranzakció azonosító"
 msgid "Own Furik Donations"
 msgstr "Adományok"
 
-#: furik_own_donations.php:190 furik_own_donations.php:233
+#: furik_own_donations.php:190 furik_own_donations.php:234
 msgid "Own Donations"
 msgstr "Adományok"
 
@@ -251,11 +283,11 @@ msgstr "Adományok"
 msgid "Please accept the data transmission agreement."
 msgstr "Kérjük fogadd el az adatkezelési nyilatkozatot."
 
-#: furik_payment_processing.php:167
+#: furik_payment_processing.php:169
 msgid "Database error. Please contact the site administrator."
 msgstr "Adatbázis hiba. Kérjük vedd fel a kapcsolatot az oldal üzemeltetőivel."
 
-#: furik_payment_processing.php:318
+#: furik_payment_processing.php:348
 msgid "Redirecting to the payment partner page"
 msgstr "Átirányítás a pénzügyi szolgáltató partner oldalára"
 
@@ -265,7 +297,7 @@ msgstr "Egyelőre nem érkezett be támogatás. Legyél Te az első!"
 
 #: furik_shortcode_donations.php:54 templates/furik_donate_form.php:51
 msgid "Anonymous donation"
-msgstr "Aninom támogatás"
+msgstr "Anonim támogatás"
 
 #: furik_shortcode_donations.php:71 furik_shortcode_donations.php:75
 msgid "now"
@@ -397,10 +429,6 @@ msgstr "E-mail címed"
 #: templates/furik_donate_form.php:63
 msgid "Phone number"
 msgstr "Telefonszám"
-
-#: templates/furik_donate_form.php:70
-msgid "Message"
-msgstr "Üzenet"
 
 #: templates/furik_donate_form.php:81
 msgid "Donation amount"

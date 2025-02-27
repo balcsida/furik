@@ -31,6 +31,11 @@ $furik_name_order_eastern = false;
 $furik_email_thanks_enabled = false;
 
 /**
+* If furik_email_send_recurring_only is set to true, only the recurring email is sent when a recurring donation was registered. If it's false, two emails are sent on recurring donations. Does not change the one time donation setup.
+*/
+$furik_email_send_recurring_only = false;
+
+/**
 * Set $furik_change_sender to true if you would like to change the from address in the outgoing e-mails. The address needs to be set in the email templates (tempates/furik_email_*).
 */
 $furik_email_change_sender = false;
