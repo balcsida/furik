@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Furik\n"
-"POT-Creation-Date: 2021-01-09 14:37+0100\n"
-"PO-Revision-Date: 2021-01-09 14:38+0100\n"
+"POT-Creation-Date: 2020-12-28 17:26+0100\n"
+"PO-Revision-Date: 2020-12-28 17:26+0100\n"
 "Last-Translator: \n"
 "Language-Team: Furik\n"
 "Language: hu_HU\n"
@@ -20,8 +20,8 @@ msgstr ""
 msgid "Donation"
 msgstr "Támogatás"
 
-#: furik_admin_donations.php:11 furik_admin_donations.php:174
-#: furik_admin_donations.php:221 furik_admin_recurring.php:11
+#: furik_admin_donations.php:11 furik_admin_donations.php:168
+#: furik_admin_donations.php:215 furik_admin_recurring.php:11
 #: furik_own_donations.php:11
 msgid "Donations"
 msgstr "Támogatások"
@@ -98,74 +98,65 @@ msgstr "Rendszeres támogatás (első alkalom)"
 msgid "Recurring (automatic)"
 msgstr "Rendszeres havi támogatás (automatikus levonás)"
 
-#: furik_admin_donations.php:74
-msgid "Recurring transfer (registration)"
-msgstr "Rendszeres átutalásos támogatás (első alkalom)"
-
-#: furik_admin_donations.php:76
-msgid "Recurring transfer (automatic)"
-msgstr "Rendszeres átutalásos támogatás (automatikus levonás)"
-
-#: furik_admin_donations.php:124
+#: furik_admin_donations.php:118
 msgid "No donations are avaliable."
 msgstr "Nincs támogatás rögzítve a rendszerben."
 
-#: furik_admin_donations.php:129 furik_admin_recurring.php:129
+#: furik_admin_donations.php:123 furik_admin_recurring.php:100
 msgid "ID"
 msgstr "Azonosító"
 
-#: furik_admin_donations.php:130 furik_own_donations.php:138
+#: furik_admin_donations.php:124 furik_own_donations.php:138
 msgid "Time"
 msgstr "Időpont"
 
-#: furik_admin_donations.php:131 furik_admin_recurring.php:131
+#: furik_admin_donations.php:125 furik_admin_recurring.php:102
 #: furik_own_donations.php:132
 msgid "Name"
 msgstr "Név"
 
-#: furik_admin_donations.php:132 furik_admin_recurring.php:132
+#: furik_admin_donations.php:126 furik_admin_recurring.php:103
 #: furik_own_donations.php:133
 msgid "E-mail"
 msgstr "E-mail"
 
-#: furik_admin_donations.php:135 furik_admin_recurring.php:136
+#: furik_admin_donations.php:129 furik_admin_recurring.php:106
 msgid "Phone Number"
 msgstr "Telefonszám"
 
-#: furik_admin_donations.php:138 furik_admin_recurring.php:139
+#: furik_admin_donations.php:132 furik_admin_recurring.php:109
 #: furik_own_donations.php:134
 msgid "Amount"
 msgstr "Összeg"
 
-#: furik_admin_donations.php:139 furik_admin_recurring.php:133
-#: furik_own_donations.php:135
+#: furik_admin_donations.php:133 furik_own_donations.php:135
 msgid "Type"
 msgstr "Típus"
 
-#: furik_admin_donations.php:140 furik_admin_recurring.php:141
+#: furik_admin_donations.php:134 furik_admin_recurring.php:111
 #: furik_campaigns.php:6 furik_own_donations.php:137
 msgid "Campaign"
 msgstr "Kampány"
 
-#: furik_admin_donations.php:141 furik_admin_recurring.php:142
+#: furik_admin_donations.php:135 furik_admin_recurring.php:112
 #: templates/furik_donate_form.php:70
 msgid "Message"
 msgstr "Üzenet"
 
-#: furik_admin_donations.php:142 furik_admin_recurring.php:143
+#: furik_admin_donations.php:136 furik_admin_recurring.php:113
 msgid "Anonymity"
 msgstr "Anonimitás"
 
-#: furik_admin_donations.php:143 furik_admin_recurring.php:144
+#: furik_admin_donations.php:137 furik_admin_recurring.php:114
 msgid "Newsletter Status"
 msgstr "Hírlevél állapota"
 
-#: furik_admin_donations.php:144 furik_admin_recurring.php:146
+#: furik_admin_donations.php:138 furik_admin_recurring.php:115
 #: furik_own_donations.php:139
 msgid "Status"
 msgstr "Állapot"
 
-#: furik_admin_donations.php:173
+#: furik_admin_donations.php:167
 msgid "Furik Donations"
 msgstr "Furik Támogatások"
 
@@ -194,12 +185,8 @@ msgstr "Regisztráció időpontja"
 msgid "Full amount"
 msgstr "Teljes összeg"
 
-#: furik_admin_recurring.php:145
-msgid "Registration status"
-msgstr "Regisztráció állapota"
-
-#: furik_admin_recurring.php:199 furik_admin_recurring.php:200
-#: furik_admin_recurring.php:237
+#: furik_admin_recurring.php:168 furik_admin_recurring.php:169
+#: furik_admin_recurring.php:195
 msgid "Recurring donations"
 msgstr "Rendszeres támogatások"
 
