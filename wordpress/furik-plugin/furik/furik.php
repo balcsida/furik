@@ -1,6 +1,8 @@
 <?php
 /**
  * Plugin Name: Furik Donation Plugin
+ * Text Domain: furik
+ * Domain Path: /lang
  */
 include_once "config.php";
 
