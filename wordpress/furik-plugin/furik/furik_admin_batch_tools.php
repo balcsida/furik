@@ -374,6 +374,53 @@ function furik_process_batch_cancel() {
 }
 
 /**
+ * Render the Process Recurring Payments tab
+ */
+function furik_render_process_recurring_tab() {
+    ?>
+    <div class="notice notice-info">
+        <p><?php _e('This tool allows you to manually process recurring payments that are due. The system normally does this automatically, but you can use this tool to trigger the process manually.', 'furik'); ?></p>
+    </div>
+    
+    <form method="post" action="" class="furik-batch-form">
+        <?php wp_nonce_field('furik_process_recurring_nonce'); ?>
+        <input type="hidden" name="furik_action" value="process_recurring">
+        <input type="hidden" name="tab" value="process_recurring">
+        
+        <table class="form-table">
+            <tr>
+                <th scope="row"><label for="process_limit"><?php _e('Number of payments to process', 'furik'); ?></label></th>
+                <td>
+                    <input type="number" id="process_limit" name="process_limit" value="10" min="1" max="100" required>
+                    <p class="description"><?php _e('Limit the number of payments to process in this batch (1-100).', 'furik'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="days_threshold"><?php _e('Days since last payment', 'furik'); ?></label></th>
+                <td>
+                    <input type="number" id="days_threshold" name="days_threshold" value="25" min="1" required>
+                    <p class="description"><?php _e('Only process payments where the last successful payment was at least this many days ago.', 'furik'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><?php _e('Dry run', 'furik'); ?></th>
+                <td>
+                    <input type="checkbox" id="dry_run_recurring" name="dry_run" value="1" checked>
+                    <label for="dry_run_recurring"><?php _e('Perform a dry run (show what would happen but make no actual charges)', 'furik'); ?></label>
+                    <p class="description"><?php _e('Uncheck this box when you are ready to actually process payments.', 'furik'); ?></p>
+                </td>
+            </tr>
+        </table>
+        
+        <p class="submit">
+            <input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e('Process Payments', 'furik'); ?>">
+        </p>
+    </form>
+    <?php
+}
+
+
+/**
  * Process recurring payments manually
  */
 function furik_process_batch_recurring() {
