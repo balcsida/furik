@@ -495,7 +495,8 @@ function furik_send_email_for_order($order_ref) {
 	}
 }
 
-if ($_POST['furik_action'] == "process_payment_form") {
+// Fix: Check if furik_action exists in $_POST before accessing it
+if (isset($_POST['furik_action']) && $_POST['furik_action'] == "process_payment_form") {
 	furik_process_payment_form();
 }
 
