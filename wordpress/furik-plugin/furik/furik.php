@@ -26,6 +26,7 @@ include_once "furik_shortcode_register_user.php";
 
 include_once "furik_payment_processing.php";
 
+include_once "furik_admin_menu.php";
 include_once "furik_admin_batch_tools.php";
 include_once "furik_admin_donations.php";
 include_once "furik_admin_recurring.php";

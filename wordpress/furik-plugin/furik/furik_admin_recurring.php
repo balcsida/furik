@@ -165,13 +165,13 @@ class Recurring_List_Plugin {
 	}
 
 	public function plugin_menu() {
-		$hook = add_menu_page(
+		$hook = add_submenu_page(
+			'furik-dashboard',    // Changed: Parent menu slug
 			__('Recurring donations', 'furik'),
 			__('Recurring donations', 'furik'),
 			'manage_options',
-			'recurring_donations',
-			[$this, 'donations_list_page'],
-			'dashicons-chart-line'
+			'furik-recurring-donations',    // Changed: Page slug
+			[$this, 'donations_list_page']
 		);
 		add_action("load-$hook", [$this, 'screen_option']);
 	}

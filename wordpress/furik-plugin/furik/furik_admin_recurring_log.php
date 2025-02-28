@@ -108,13 +108,13 @@ class Recurring_Log_List_Plugin {
 	}
 
 	public function plugin_menu() {
-		$hook = add_menu_page(
+		$hook = add_submenu_page(
+			'furik-dashboard',    // Changed: Parent menu slug
 			__('Recurring log', 'furik'),
 			__('Recurring log', 'furik'),
 			'manage_options',
-			'recurring_log',
-			[$this, 'transaction_log_list_page'],
-			'dashicons-chart-line'
+			'furik-recurring-log',    // Changed: Page slug
+			[$this, 'transaction_log_list_page']
 		);
 		add_action("load-$hook", [$this, 'screen_option']);
 	}

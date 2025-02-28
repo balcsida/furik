@@ -4,11 +4,11 @@
  */
 function furik_batch_tools_menu() {
     add_submenu_page(
-        'furik-dashboard', // Parent slug (main Furik menu)
+        'furik-dashboard',    // Changed: Parent menu slug
         __('Batch Tools', 'furik'),
         __('Batch Tools', 'furik'),
         'manage_options',
-        'furik-batch-tools', // Page slug - this is important
+        'furik-batch-tools',    // Page slug
         'furik_batch_tools_page'
     );
 }

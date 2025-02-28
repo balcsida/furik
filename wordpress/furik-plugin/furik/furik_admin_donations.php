@@ -177,13 +177,13 @@ class Donations_List_Plugin {
 	}
 
 	public function plugin_menu() {
-		$hook = add_menu_page(
+		$hook = add_submenu_page(
+			'furik-dashboard',    // Changed: Parent menu slug
 			__('Furik Donations', 'furik'),
 			__('Donations', 'furik'),
 			'manage_options',
-			'wp_list_table_class',
-			[$this, 'donations_list_page'],
-			'dashicons-chart-line'
+			'furik-donations',    // Changed: Page slug
+			[$this, 'donations_list_page']
 		);
 		add_action("load-$hook", [$this, 'screen_option']);
 	}
