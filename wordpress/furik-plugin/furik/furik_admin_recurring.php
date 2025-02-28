@@ -29,7 +29,14 @@ class Recurring_List extends WP_List_Table {
 
 	public function column_future_count($item) {
 		if ($item['future_count']) {
-			return $item['future_count'] . ' ' . __('future donations', 'furik');
+			$cancel_link = sprintf(
+				'<br /><a href="?page=%s&cancelRecurring=%s&transactionId=%s" onclick="return confirm(\'%s\');">' . __('Cancel recurring', 'furik') . '</a>',
+				$_REQUEST['page'],
+				$item['id'],
+				$item['transaction_id'],
+				__('Are you sure you want to cancel this recurring donation? This action cannot be undone.', 'furik')
+			);
+			return $item['future_count'] . ' ' . __('future donations', 'furik') . $cancel_link;
 		}
 		elseif ($item['transaction_type'] == FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG) {
 			$days = (time() - strtotime($item['last_transaction']))/60/60/24;
@@ -175,6 +182,71 @@ class Recurring_List_Plugin {
 
 	public function donations_list_page() {
 		global $wpdb;
+
+		// Handle cancellation of recurring donations - using the same parameters as furik_own_donations.php
+		if (isset($_GET['cancelRecurring']) && is_numeric($_GET['cancelRecurring'])) {
+			$parent_id = $_GET['cancelRecurring'];
+			$transaction_id = isset($_GET['transactionId']) ? $_GET['transactionId'] : '';
+			
+			// First, verify that this is actually a recurring donation
+			$is_recurring = $wpdb->get_var($wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions 
+				WHERE id = %d AND transaction_id = %s AND 
+				transaction_type IN (" . FURIK_TRANSACTION_TYPE_RECURRING_REG . ", " . FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG . ")",
+				$parent_id,
+				$transaction_id
+			));
+			
+			if ($is_recurring) {
+				// Check for vendor_ref for SimplePay card-based recurring donations
+				$vendor_ref = $wpdb->get_var($wpdb->prepare(
+					"SELECT vendor_ref FROM {$wpdb->prefix}furik_transactions 
+					WHERE id = %d AND transaction_id = %s",
+					$parent_id,
+					$transaction_id
+				));
+				
+				$card_cancellation_successful = false;
+				
+				// If this is a card-based recurring with vendor_ref, cancel it with SimplePay
+				if (!empty($vendor_ref)) {
+					try {
+						furik_cancel_recurring($vendor_ref);
+						$card_cancellation_successful = true;
+					} catch (Exception $e) {
+						// Log error but continue to delete future transactions
+						error_log('Error cancelling SimplePay recurring payment: ' . $e->getMessage());
+					}
+				}
+				
+				// Delete future transactions regardless of card cancellation result
+				$deleted_count = $wpdb->query($wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}furik_transactions 
+					WHERE parent = %d AND transaction_status = %d",
+					$parent_id,
+					FURIK_STATUS_FUTURE
+				));
+				
+				// Set notification message based on what happened
+				if (!empty($vendor_ref) && $card_cancellation_successful) {
+					echo '<div class="notice notice-success is-dismissible"><p>' . 
+						sprintf(__('Recurring donation has been cancelled. Card registration deleted and %d future transactions removed.', 'furik'), $deleted_count) . 
+						'</p></div>';
+				} else if (!empty($vendor_ref) && !$card_cancellation_successful) {
+					echo '<div class="notice notice-warning is-dismissible"><p>' . 
+						sprintf(__('Warning: Error cancelling the payment card. %d future transactions were removed, but you may need to contact SimplePay support.', 'furik'), $deleted_count) . 
+						'</p></div>';
+				} else {
+					echo '<div class="notice notice-success is-dismissible"><p>' . 
+						sprintf(__('Recurring donation has been cancelled. %d future transactions removed.', 'furik'), $deleted_count) . 
+						'</p></div>';
+				}
+			} else {
+				echo '<div class="notice notice-error is-dismissible"><p>' . 
+					__('Error: The selected transaction is not a valid recurring donation.', 'furik') . 
+					'</p></div>';
+			}
+		}
 		?>
 		<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.10.23/b-1.6.5/b-html5-1.6.5/datatables.min.css"/>
 		<style>

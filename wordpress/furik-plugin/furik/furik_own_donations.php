@@ -63,7 +63,7 @@ class Own_Donations_List extends WP_List_Table {
 			$next = $wpdb->get_var($sql);
 			if ($next) {
 				$line .= __('Next', 'furik') . ": " . $next . "<br />";
-				$line .= "<a href=\"?page=".$_REQUEST['page']."&cancelRecurring=".$item['id']."&transactionId=".$item['transaction_id']."\">".__('Cancel future donations', 'furik')."</a>";
+				$line .= "<a href=\"?page=".$_REQUEST['page']."&cancelRecurring=".$item['id']."&transactionId=".$item['transaction_id']."\" onclick=\"return confirm('".__('Are you sure you want to cancel this recurring donation? This action cannot be undone.', 'furik')."');\">".__('Cancel future donations', 'furik')."</a>";
 			}
 			else {
 				$line .= __('Expired or cancelled.', 'furik') ."<br />";
@@ -213,20 +213,69 @@ class Own_Donations_List_Plugin {
 		global $wpdb;
 
 		if (isset($_GET['cancelRecurring']) && is_numeric($_GET['cancelRecurring'])) {
+			$parent_id = intval($_GET['cancelRecurring']);
+			$transaction_id = isset($_GET['transactionId']) ? sanitize_text_field($_GET['transactionId']) : '';
 			$user = wp_get_current_user();
-			$parent_id = $_GET['cancelRecurring'];
-
-			$sql = "SELECT vendor_ref FROM {$wpdb->prefix}furik_transactions
-				WHERE id=$parent_id AND
-				transaction_id='" . esc_sql($_GET['transactionId']) . "' AND
-				email='" . esc_sql($user->user_email) . "'";
-
-			if ($vendor_ref = $wpdb->get_var($sql)) {
-				furik_cancel_recurring($vendor_ref);
-
-				$wpdb->query(
-					"DELETE FROM {$wpdb->prefix}furik_transactions WHERE parent=$parent_id AND transaction_status=".FURIK_STATUS_FUTURE
-				);
+			
+			// First, verify that this is actually a recurring donation owned by the current user
+			$is_recurring = $wpdb->get_var($wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions 
+				WHERE id = %d AND transaction_id = %s AND email = %s AND 
+				transaction_type IN (" . FURIK_TRANSACTION_TYPE_RECURRING_REG . ", " . FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG . ")",
+				$parent_id,
+				$transaction_id,
+				$user->user_email
+			));
+			
+			if ($is_recurring) {
+				// Check for vendor_ref for SimplePay card-based recurring donations
+				$vendor_ref = $wpdb->get_var($wpdb->prepare(
+					"SELECT vendor_ref FROM {$wpdb->prefix}furik_transactions 
+					WHERE id = %d AND transaction_id = %s AND email = %s",
+					$parent_id,
+					$transaction_id,
+					$user->user_email
+				));
+				
+				$card_cancellation_successful = false;
+				
+				// If this is a card-based recurring with vendor_ref, cancel it with SimplePay
+				if (!empty($vendor_ref)) {
+					try {
+						furik_cancel_recurring($vendor_ref);
+						$card_cancellation_successful = true;
+					} catch (Exception $e) {
+						// Log error but continue to delete future transactions
+						error_log('Error cancelling SimplePay recurring payment: ' . $e->getMessage());
+					}
+				}
+				
+				// Delete future transactions regardless of card cancellation result
+				$deleted_count = $wpdb->query($wpdb->prepare(
+					"DELETE FROM {$wpdb->prefix}furik_transactions 
+					WHERE parent = %d AND transaction_status = %d",
+					$parent_id,
+					FURIK_STATUS_FUTURE
+				));
+				
+				// Set notification message based on what happened
+				if (!empty($vendor_ref) && $card_cancellation_successful) {
+					echo '<div class="notice notice-success is-dismissible"><p>' . 
+						__('Your recurring donation has been cancelled. All future donations have been removed.', 'furik') . 
+						'</p></div>';
+				} else if (!empty($vendor_ref) && !$card_cancellation_successful) {
+					echo '<div class="notice notice-warning is-dismissible"><p>' . 
+						__('Warning: There was an issue cancelling your payment card registration, but all future donations have been removed. If you see unexpected charges, please contact support.', 'furik') . 
+						'</p></div>';
+				} else {
+					echo '<div class="notice notice-success is-dismissible"><p>' . 
+						__('Your recurring donation has been cancelled. All future donations have been removed.', 'furik') . 
+						'</p></div>';
+				}
+			} else {
+				echo '<div class="notice notice-error is-dismissible"><p>' . 
+					__('Error: The selected donation could not be cancelled. Please contact support if you need assistance.', 'furik') . 
+					'</p></div>';
 			}
 		}
 		?>
