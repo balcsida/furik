@@ -49,7 +49,7 @@ class Recurring_List extends WP_List_Table {
 	}
 
 	public function column_transaction_id($item) {
-		return "<a href=\"admin.php?page=wp_list_table_class&filter_by_parent=" . $item['id'] . "\">". $item['transaction_id'] . "</a>";
+		return "<a href=\"admin.php?page=furik-donations&filter_by_parent=" . $item['id'] . "\">". $item['transaction_id'] . "</a>";
 	}
 
 	public function column_transaction_status($item) {
