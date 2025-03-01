@@ -26,14 +26,14 @@ function furik_batch_tools_scripts($hook) {
     // Register and enqueue CSS
     wp_register_style(
         'furik-batch-tools', 
-        plugins_url('css/furik-batch-tools.css', dirname(__FILE__))
+        plugins_url('/furik/css/furik-batch-tools.css', dirname(__FILE__))
     );
     wp_enqueue_style('furik-batch-tools');
     
     // Register and enqueue JS
     wp_register_script(
         'furik-batch-tools', 
-        plugins_url('js/furik-batch-tools.js', dirname(__FILE__)), 
+        plugins_url('/furik/js/furik-batch-tools.js', dirname(__FILE__)), 
         array('jquery'), 
         '1.0', 
         true
