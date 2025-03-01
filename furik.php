@@ -6,10 +6,12 @@
  */
 include_once "config.php";
 
+include_once "furik_cron.php";
 include_once "furik_helper.php";
 include_once "furik_localization.php";
 
 include_once "furik_database.php";
+include_once "furik_page_installation.php";
 
 include_once "furik_shortcode_back_to_campaign_url.php";
 include_once "furik_shortcode_campaign.php";
@@ -31,6 +33,7 @@ include_once "furik_admin_batch_tools.php";
 include_once "furik_admin_donations.php";
 include_once "furik_admin_recurring.php";
 include_once "furik_admin_recurring_log.php";
+include_once "furik_dashboard_widget.php";
 include_once "furik_campaigns.php";
 include_once "furik_own_donations.php";
 
