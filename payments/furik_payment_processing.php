@@ -183,8 +183,8 @@ function furik_process_payment_form() {
 function furik_process_recurring() {
 	global $wpdb;
 
-	require_once "SimplePayV21.php";
-	require_once "SimplePayV21CardStorage.php";
+	require_once "../payments/SimplePayV21.php";
+	require_once "../payments/SimplePayV21CardStorage.php";
 
 	$sql = "SELECT rec.*
 		FROM
