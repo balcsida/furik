@@ -2,8 +2,8 @@
 function furik_cancel_recurring($vendor_ref) {
 	global $furik_payment_merchant;
 
-	require_once 'SimplePayV21.php';
-	require_once 'SimplePayV21CardStorage.php';
+	require_once '../payments/SimplePayV21.php';
+	require_once '../payments/SimplePayV21CardStorage.php';
 
 	$trx = new SimplePayCardCancel;
 	$trx->addConfig(furik_get_simple_config());
@@ -17,7 +17,7 @@ function furik_cancel_recurring($vendor_ref) {
  * Processes IPN messages from Simple
  */
 function furik_process_ipn() {
-	require_once 'SimplePayV21.php';
+	require_once '../payments/SimplePayV21.php';
 
 	$trx = new SimplePayIpn;
 	$trx->addConfig(furik_get_simple_config());
@@ -43,7 +43,7 @@ function furik_process_payment() {
 		$furik_payment_timeout_url,
 		$furik_payment_unsuccessful_url;
 
-	require_once 'SimplePayV21.php';
+	require_once '../payments/SimplePayV21.php';
 
 	$trx = new SimplePayBack;
 	$trx->addConfig(furik_get_simple_config());
@@ -285,7 +285,7 @@ function furik_process_recurring() {
 function furik_prepare_simplepay_redirect($local_id, $transactionId, $campaign, $amount, $email, $recurring = false, $name) {
 	global $wpdb, $furik_simplepay_ask_for_invoice_information, $furik_production_system;
 
-	require_once 'SimplePayV21.php';
+	require_once '../payments/SimplePayV21.php';
 
 	$lu = new SimplePayStart;
 
