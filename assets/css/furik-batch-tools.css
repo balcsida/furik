@@ -4,57 +4,57 @@
 
 /* Tab styling */
 .nav-tab-wrapper {
-    margin-bottom: 20px;
+	margin-bottom: 20px;
 }
 
 /* Results table improvements */
 .wp-list-table th {
-    font-weight: bold;
+	font-weight: bold;
 }
 
 .tab-content {
-    margin-top: 20px;
+	margin-top: 20px;
 }
 
 /* Status colors */
 .status-success {
-    color: #46b450;
+	color: #46b450;
 }
 
 .status-error {
-    color: #dc3232;
+	color: #dc3232;
 }
 
 .status-warning {
-    color: #ffb900;
+	color: #ffb900;
 }
 
 .status-skipped {
-    color: #82878c;
+	color: #82878c;
 }
 
 /* Confirmation dialog styling */
 .confirmation-dialog {
-    background: #fff;
-    border: 1px solid #ddd;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	background: #fff;
+	border: 1px solid #ddd;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .confirmation-dialog h3 {
-    margin-top: 0;
+	margin-top: 0;
 }
 
 /* Form styling */
 .form-table th {
-    width: 250px;
+	width: 250px;
 }
 
 /* Results section */
 .results-summary {
-    margin: 20px 0;
-    padding: 15px;
-    background: #f8f8f8;
-    border-left: 4px solid #46b450;
+	margin: 20px 0;
+	padding: 15px;
+	background: #f8f8f8;
+	border-left: 4px solid #46b450;
 }

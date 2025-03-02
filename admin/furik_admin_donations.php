@@ -1,89 +1,93 @@
 <?php
-if (!class_exists('WP_List_Table') ) {
-	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+if ( ! class_exists( 'WP_List_Table' ) ) {
+	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
 class Donations_List extends WP_List_Table {
 
 	public function __construct() {
-		parent::__construct( [
-			'singular' => __('Donation', 'furik'),
-			'plural'   => __('Donations', 'furik'),
-			'ajax'     => false
-		] );
+		parent::__construct(
+			array(
+				'singular' => __( 'Donation', 'furik' ),
+				'plural'   => __( 'Donations', 'furik' ),
+				'ajax'     => false,
+			)
+		);
 	}
 
-	public function column_default($item, $column_name) {
-		return esc_html($item[$column_name]);
+	public function column_default( $item, $column_name ) {
+		return esc_html( $item[ $column_name ] );
 	}
 
-	public function column_campaign_name($item) {
-		if (!$item['campaign_name']) {
-			return __('General donation', 'furik');
+	public function column_campaign_name( $item ) {
+		if ( ! $item['campaign_name'] ) {
+			return __( 'General donation', 'furik' );
 		}
-		if (!$item['parent_campaign_name']) {
+		if ( ! $item['parent_campaign_name'] ) {
 			return $item['campaign_name'];
 		}
-		return $item['campaign_name'] . " (" . $item['parent_campaign_name'] .")";
+		return $item['campaign_name'] . ' (' . $item['parent_campaign_name'] . ')';
 	}
 
-	public function column_transaction_status($item) {
-		switch ($item['transaction_status']) {
-			case "":
-				return __('Pending', 'furik');
+	public function column_transaction_status( $item ) {
+		switch ( $item['transaction_status'] ) {
+			case '':
+				return __( 'Pending', 'furik' );
 			case FURIK_STATUS_SUCCESSFUL:
-				return __('Successful, waiting for confirmation', 'furik');
+				return __( 'Successful, waiting for confirmation', 'furik' );
 			case FURIK_STATUS_UNSUCCESSFUL:
-				return __('Unsuccessful card payment', 'furik');
+				return __( 'Unsuccessful card payment', 'furik' );
 			case FURIK_STATUS_TRANSFER_ADDED:
 			case FURIK_STATUS_CASH_ADDED:
 				$actions = array(
-					'approve' => sprintf('<br /><a href="?page=%s&action=%s&campaign=%s&orderby=%s&order=%s&paged=%s">' . __('Approve', 'furik') . '</a>',
+					'approve' => sprintf(
+						'<br /><a href="?page=%s&action=%s&campaign=%s&orderby=%s&order=%s&paged=%s">' . __( 'Approve', 'furik' ) . '</a>',
 						$_REQUEST['page'],
 						'approve',
 						$item['id'],
 						@$_GET['orderby'],
 						@$_GET['order'],
-						@$_GET['paged']),
+						@$_GET['paged']
+					),
 				);
-				return sprintf('%1$s %2$s', __('Waiting for confirmation', 'furik'), $actions['approve'] );
+				return sprintf( '%1$s %2$s', __( 'Waiting for confirmation', 'furik' ), $actions['approve'] );
 			case FURIK_STATUS_IPN_SUCCESSFUL:
-				return __('Successful and confirmed', 'furik');
+				return __( 'Successful and confirmed', 'furik' );
 			case FURIK_STATUS_FUTURE:
-				return __('Future donation', 'furik');
+				return __( 'Future donation', 'furik' );
 			case FURIK_STATUS_RECURRING_FAILED:
-				return __('Recurring transaction failed', 'furik');
+				return __( 'Recurring transaction failed', 'furik' );
 			case FURIK_STATUS_RECURRING_PAST_FAILED:
-				return __('Past recurring transaction failed', 'furik');
+				return __( 'Past recurring transaction failed', 'furik' );
 
 			default:
-				return __('Unknown', 'furik');
+				return __( 'Unknown', 'furik' );
 		}
 	}
 
-	public function column_transaction_type($item) {
-		switch ($item['transaction_type']) {
+	public function column_transaction_type( $item ) {
+		switch ( $item['transaction_type'] ) {
 			case FURIK_TRANSACTION_TYPE_SIMPLEPAY:
-				return __('SimplePay Card', 'furik');
+				return __( 'SimplePay Card', 'furik' );
 			case FURIK_TRANSACTION_TYPE_TRANSFER:
-				return __('Bank transfer', 'furik');
+				return __( 'Bank transfer', 'furik' );
 			case FURIK_TRANSACTION_TYPE_CASH:
-				return __('Cash payment', 'furik');
+				return __( 'Cash payment', 'furik' );
 			case FURIK_TRANSACTION_TYPE_RECURRING_REG:
-				return __('Recurring (registration)', 'furik');
+				return __( 'Recurring (registration)', 'furik' );
 			case FURIK_TRANSACTION_TYPE_RECURRING_AUTO:
-				return __('Recurring (automatic)', 'furik');
+				return __( 'Recurring (automatic)', 'furik' );
 			case FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG:
-				return __('Recurring transfer (registration)', 'furik');
+				return __( 'Recurring transfer (registration)', 'furik' );
 			case FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_AUTO:
-				return __('Recurring transfer (automatic)', 'furik');
+				return __( 'Recurring transfer (automatic)', 'furik' );
 
 			default:
-				return __('Unknown', 'furik');
+				return __( 'Unknown', 'furik' );
 		}
 	}
 
-	public static function get_donations($per_page = 5, $page_number = 1) {
+	public static function get_donations( $per_page = 5, $page_number = 1 ) {
 		global $wpdb;
 
 		$sql = "SELECT
@@ -95,28 +99,26 @@ class Donations_List extends WP_List_Table {
 				LEFT OUTER JOIN {$wpdb->prefix}posts campaigns ON (tr.campaign=campaigns.ID)
 				LEFT OUTER JOIN {$wpdb->prefix}posts parentcampaigns ON (campaigns.post_parent=parentcampaigns.ID)
 			WHERE " . self::get_filter_query();
-		if (!empty($_REQUEST['orderby'])) {
-			$sql .= ' ORDER BY ' . esc_sql($_REQUEST['orderby']);
-			$sql .= ! empty($_REQUEST['order']) ? ' ' . esc_sql($_REQUEST['order']) : ' ASC';
+		if ( ! empty( $_REQUEST['orderby'] ) ) {
+			$sql .= ' ORDER BY ' . esc_sql( $_REQUEST['orderby'] );
+			$sql .= ! empty( $_REQUEST['order'] ) ? ' ' . esc_sql( $_REQUEST['order'] ) : ' ASC';
 		} else {
 			$sql .= ' ORDER BY TIME DESC';
 		}
-		$result = $wpdb->get_results($sql, 'ARRAY_A');
+		$result = $wpdb->get_results( $sql, 'ARRAY_A' );
 
 		return $result;
 	}
 
 	public static function get_filter_query() {
-		if (is_numeric($_GET['filter_by_parent'])) {
+		if ( is_numeric( $_GET['filter_by_parent'] ) ) {
 			$parent_id = $_GET['filter_by_parent'];
 			return "(tr.id = $parent_id OR tr.parent=$parent_id)";
-		}
-		else {
-			return
-				"((transaction_status not in (" .
-					FURIK_STATUS_FUTURE . ", " .
-					FURIK_STATUS_RECURRING_PAST_FAILED . ")) or
-				 (transaction_status is null))";
+		} else {
+			return '((transaction_status not in (' .
+					FURIK_STATUS_FUTURE . ', ' .
+					FURIK_STATUS_RECURRING_PAST_FAILED . ')) or
+				 (transaction_status is null))';
 		}
 	}
 
@@ -125,32 +127,32 @@ class Donations_List extends WP_List_Table {
 
 		$sql = "SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions as tr WHERE " . self::get_filter_query();
 
-		return $wpdb->get_var($sql);
+		return $wpdb->get_var( $sql );
 	}
 
 	public function no_items() {
-		_e('No donations are avaliable.', 'furik');
+		_e( 'No donations are avaliable.', 'furik' );
 	}
 
 	function get_columns() {
-		$columns = [
-			'transaction_id' => __('ID', 'furik'),
-			'time' => __('Time', 'furik'),
-			'name' => __('Name', 'furik'),
-			'email' => __('E-mail', 'furik')
-		];
-		if (furik_extra_field_enabled('phone_number')) {
-			$columns += ['phone_number' => __('Phone Number', 'furik')];
+		$columns = array(
+			'transaction_id' => __( 'ID', 'furik' ),
+			'time'           => __( 'Time', 'furik' ),
+			'name'           => __( 'Name', 'furik' ),
+			'email'          => __( 'E-mail', 'furik' ),
+		);
+		if ( furik_extra_field_enabled( 'phone_number' ) ) {
+			$columns += array( 'phone_number' => __( 'Phone Number', 'furik' ) );
 		}
-		$columns += [
-			'amount' => __('Amount', 'furik'),
-			'transaction_type' => __('Type', 'furik'),
-			'campaign_name' => __('Campaign', 'furik'),
-			'message' => __('Message', 'furik'),
-			'anon' => __('Anonymity', 'furik'),
-			'newsletter_status' => __('Newsletter Status', 'furik'),
-			'transaction_status' => __('Status', 'furik')
-		];
+		$columns += array(
+			'amount'             => __( 'Amount', 'furik' ),
+			'transaction_type'   => __( 'Type', 'furik' ),
+			'campaign_name'      => __( 'Campaign', 'furik' ),
+			'message'            => __( 'Message', 'furik' ),
+			'anon'               => __( 'Anonymity', 'furik' ),
+			'newsletter_status'  => __( 'Newsletter Status', 'furik' ),
+			'transaction_status' => __( 'Status', 'furik' ),
+		);
 
 		return $columns;
 	}
@@ -168,35 +170,35 @@ class Donations_List_Plugin {
 	public $donations_obj;
 
 	public function __construct() {
-		add_filter('set-screen-option', [ __CLASS__, 'set_screen' ], 10, 3);
-		add_action('admin_menu', [$this, 'plugin_menu']);
+		add_filter( 'set-screen-option', array( __CLASS__, 'set_screen' ), 10, 3 );
+		add_action( 'admin_menu', array( $this, 'plugin_menu' ) );
 	}
 
-	public static function set_screen($status, $option, $value) {
+	public static function set_screen( $status, $option, $value ) {
 		return $value;
 	}
 
 	public function plugin_menu() {
 		$hook = add_submenu_page(
 			'furik-dashboard',    // Changed: Parent menu slug
-			__('Furik Donations', 'furik'),
-			__('Donations', 'furik'),
+			__( 'Furik Donations', 'furik' ),
+			__( 'Donations', 'furik' ),
 			'manage_options',
 			'furik-donations',    // Changed: Page slug
-			[$this, 'donations_list_page']
+			array( $this, 'donations_list_page' )
 		);
-		add_action("load-$hook", [$this, 'screen_option']);
+		add_action( "load-$hook", array( $this, 'screen_option' ) );
 	}
 
 	public function screen_option() {
 		$option = 'per_page';
-		$args   = [
-			'label' => 'Donations',
+		$args   = array(
+			'label'   => 'Donations',
 			'default' => 20,
-			'option' => 'donations_per_page'
-		];
+			'option'  => 'donations_per_page',
+		);
 
-		add_screen_option($option, $args);
+		add_screen_option( $option, $args );
 
 		$this->donations_obj = new Donations_List();
 	}
@@ -204,11 +206,11 @@ class Donations_List_Plugin {
 	public function donations_list_page() {
 		global $wpdb;
 
-		if (isset($_GET['action']) && $_GET['action'] == 'approve' && isset($_GET['campaign'])) {
+		if ( isset( $_GET['action'] ) && $_GET['action'] == 'approve' && isset( $_GET['campaign'] ) ) {
 			$wpdb->update(
 				"{$wpdb->prefix}furik_transactions",
-				array("transaction_status" => FURIK_STATUS_IPN_SUCCESSFUL),
-				array("id" => esc_sql($_GET['campaign']))
+				array( 'transaction_status' => FURIK_STATUS_IPN_SUCCESSFUL ),
+				array( 'id' => esc_sql( $_GET['campaign'] ) )
 			);
 		}
 
@@ -226,7 +228,7 @@ class Donations_List_Plugin {
 			}
 		</style>
 		<div class="wrap">
-			<h1 class="wp-heading-inline"><?php _e('Donations', 'furik') ?></h1>
+			<h1 class="wp-heading-inline"><?php _e( 'Donations', 'furik' ); ?></h1>
 			<div id="poststuff">
 				<div id="post-body" class="metabox-holder">
 					<div id="post-body-content">
@@ -234,7 +236,8 @@ class Donations_List_Plugin {
 							<form method="post">
 								<?php
 								$this->donations_obj->prepare_items();
-								$this->donations_obj->display(); ?>
+								$this->donations_obj->display();
+								?>
 							</form>
 						</div>
 					</div>
@@ -263,11 +266,11 @@ class Donations_List_Plugin {
 			});
 		} );
 		</script>
-	<?php
+		<?php
 	}
 
 	public static function get_instance() {
-		if (!isset(self::$instance)) {
+		if ( ! isset( self::$instance ) ) {
 			self::$instance = new self();
 		}
 
@@ -275,6 +278,9 @@ class Donations_List_Plugin {
 	}
 }
 
-add_action( 'plugins_loaded', function () {
-	Donations_List_Plugin::get_instance();
-} );
+add_action(
+	'plugins_loaded',
+	function () {
+		Donations_List_Plugin::get_instance();
+	}
+);
