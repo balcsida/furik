@@ -2,7 +2,7 @@
 /**
  * WordPress shortcode: [furik_campaign]: summary of a child campaign
  */
-function furik_shortcode_campaign($atts) {
+function furik_shortcode_campaign( $atts ) {
 	global $wpdb;
 
 	$default_layout = <<<EOT
@@ -17,44 +17,50 @@ function furik_shortcode_campaign($atts) {
 </div>
 EOT;
 
-	$a = shortcode_atts( array(
-		'layout' => $default_layout,
-		'default_image' => '',
-	), $atts );
+	$a = shortcode_atts(
+		array(
+			'layout'        => $default_layout,
+			'default_image' => '',
+		),
+		$atts
+	);
 
 	$campaign = get_post();
 
-	if ($campaign->post_parent == null) {
+	if ( $campaign->post_parent == null ) {
 		return '';
 	}
 
-	$r = "";
+	$r = '';
 
-	$progress = furik_progress($campaign->ID);
-	$meta = get_post_custom($campaign->ID);
-	$sql = "SELECT
+	$progress = furik_progress( $campaign->ID );
+	$meta     = get_post_custom( $campaign->ID );
+	$sql      = "SELECT
 			sum(amount)
 		FROM
 			{$wpdb->prefix}furik_transactions AS transaction
 			LEFT OUTER JOIN {$wpdb->prefix}posts campaigns ON (transaction.campaign=campaigns.ID)
 		WHERE campaigns.ID in ({$campaign->ID})
-			AND transaction.transaction_status in (".FURIK_STATUS_DISPLAYABLE.")
-		ORDER BY time DESC";
+			AND transaction.transaction_status in (" . FURIK_STATUS_DISPLAYABLE . ')
+		ORDER BY time DESC';
 
-	$collected = $wpdb->get_var($sql);
+	$collected = $wpdb->get_var( $sql );
 
-	$r .= strtr($a['layout'], [
-		'{url}' => $campaign->guid,
-		'{image}' => (@$meta['IMAGE'][0] ?: $a['default_image']),
-		'{title}' => esc_html($campaign->post_title),
-		'{excerpt}' => esc_html($campaign->post_excerpt),
-		'{progress_bar}' => $progress['progress_bar'],
-		'{percentage}' => $progress['percentage'],
-		'{goal}' => number_format($progress['goal'], 0, ',', ' '),
-		'{collected}' => number_format($collected, 0, ',', ' '),
-	]);
+	$r .= strtr(
+		$a['layout'],
+		array(
+			'{url}'          => $campaign->guid,
+			'{image}'        => ( @$meta['IMAGE'][0] ?: $a['default_image'] ),
+			'{title}'        => esc_html( $campaign->post_title ),
+			'{excerpt}'      => esc_html( $campaign->post_excerpt ),
+			'{progress_bar}' => $progress['progress_bar'],
+			'{percentage}'   => $progress['percentage'],
+			'{goal}'         => number_format( $progress['goal'], 0, ',', ' ' ),
+			'{collected}'    => number_format( $collected, 0, ',', ' ' ),
+		)
+	);
 
 	return $r;
 }
 
-add_shortcode('furik_campaign', 'furik_shortcode_campaign');
+add_shortcode( 'furik_campaign', 'furik_shortcode_campaign' );
