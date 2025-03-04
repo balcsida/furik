@@ -720,7 +720,7 @@ class Recurring_List_Plugin {
 		// Add custom scripts and styles
 		wp_enqueue_script(
 			'furik-recurring-admin',
-			plugins_url( '/furik/js/furik-recurring-admin.js', __DIR__ ),
+			plugins_url( 'assets/js/furik-recurring-admin.js', __DIR__ ),
 			array( 'jquery', 'thickbox' ),
 			'1.0.0',
 			true
@@ -728,7 +728,7 @@ class Recurring_List_Plugin {
 
 		wp_enqueue_style(
 			'furik-recurring-admin',
-			plugins_url( '/furik/css/furik-recurring-admin.css', __DIR__ ),
+			plugins_url( 'assets/css/furik-recurring-admin.css', __DIR__ ),
 			array(),
 			'1.0.0'
 		);
