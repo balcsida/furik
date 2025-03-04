@@ -41,9 +41,9 @@ function furik_load_template( $_template_file, $args = array() ) {
 	} else {
 		/*
 		 * If neither the child nor parent theme have overridden the template,
-		 * we load the template from the 'templates' sub-directory of the directory this file is in.
+		 * we load the template from the 'templates' directory at the plugin root.
 		 */
-		load_template( __DIR__ . '/templates/' . $_template_file, true, $args );
+		load_template( dirname( __DIR__ ) . '/templates/' . $_template_file, true, $args );
 	}
 
 	$content = ob_get_contents();
