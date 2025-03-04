@@ -66,8 +66,8 @@ function furik_cron_process_recurring_payments() {
     
     error_log('Furik: Found ' . count($payments) . ' recurring payments to process');
     
-    require_once "SimplePayV21.php";
-    require_once "SimplePayV21CardStorage.php";
+    require_once "../payments/SimplePayV21.php";
+    require_once "../payments/SimplePayV21CardStorage.php";
     
     $processed_count = 0;
     $successful_count = 0;

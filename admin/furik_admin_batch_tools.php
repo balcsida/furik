@@ -442,8 +442,8 @@ function furik_process_batch_recurring() {
     $days_threshold = max(1, intval($_POST['days_threshold']));
     $dry_run = isset($_POST['dry_run']) ? true : false;
     
-    require_once "SimplePayV21.php";
-    require_once "SimplePayV21CardStorage.php";
+    require_once "../payments/SimplePayV21.php";
+    require_once "../payments/SimplePayV21CardStorage.php";
     
     // Get future recurring payments that are due
     $sql = "SELECT rec.*

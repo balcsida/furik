@@ -26,27 +26,32 @@ jobs:
       - name: Install gettext
         run: sudo apt-get install -y gettext
         
+      - name: Prepare build directory
+        run: |
+          mkdir -p build/furik
+          cp -r includes admin payments shortcodes assets templates lang *.php *.md LICENSE build/furik/
+          
       - name: Generate .mo files
         run: |
-          mkdir -p wordpress/furik-plugin/furik/lang
-          msgfmt -o wordpress/furik-plugin/furik/lang/furik-hu_HU.mo wordpress/furik-plugin/furik/lang/furik-hu_HU.po
+          cd build/furik
+          msgfmt -o lang/furik-hu_HU.mo lang/furik-hu_HU.po
         
       - name: Create plugin zip
         run: |
-          cd wordpress/furik-plugin
+          cd build
           zip -r furik.zip furik
         
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: furik-plugin
-          path: wordpress/furik-plugin/furik.zip
+          path: build/furik.zip
           
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: wordpress/furik-plugin/furik.zip
+          files: build/furik.zip
           name: Furik Plugin ${{ github.ref_name }}
           draft: false
           prerelease: false
