@@ -407,7 +407,7 @@ function furik_process_batch_cancel() {
 function furik_render_process_recurring_tab() {
 	?>
 	<div class="notice notice-info">
-		<p><?php _e( 'This tool allows you to manually process recurring payments that are due. The system normally does this automatically, but you can use this tool to trigger the process manually.', 'furik' ); ?></p>
+		<p><?php _e( 'This tool allows you to manually process recurring payments that are due. The system normally does this automatically via cron, but you can use this tool to trigger the process manually.', 'furik' ); ?></p>
 	</div>
 	
 	<form method="post" action="" class="furik-batch-form">
@@ -419,8 +419,8 @@ function furik_render_process_recurring_tab() {
 			<tr>
 				<th scope="row"><label for="process_limit"><?php _e( 'Number of payments to process', 'furik' ); ?></label></th>
 				<td>
-					<input type="number" id="process_limit" name="process_limit" value="10" min="1" max="100" required>
-					<p class="description"><?php _e( 'Limit the number of payments to process in this batch (1-100).', 'furik' ); ?></p>
+					<input type="number" id="process_limit" name="process_limit" value="10" min="1" max="5000" required>
+					<p class="description"><?php _e( 'Limit the number of payments to process in this batch (1-5000).', 'furik' ); ?></p>
 				</td>
 			</tr>
 			<tr>
@@ -447,213 +447,18 @@ function furik_render_process_recurring_tab() {
 	<?php
 }
 
-
 /**
- * Process recurring payments manually
+ * Process recurring payments manually from the Batch Tools page
  */
 function furik_process_batch_recurring() {
-	global $wpdb;
+    check_admin_referer('furik_process_recurring_nonce');
 
-	check_admin_referer( 'furik_process_recurring_nonce' );
+    $process_limit = isset($_POST['process_limit']) ? intval($_POST['process_limit']) : 10;
+    $days_threshold = isset($_POST['days_threshold']) ? intval($_POST['days_threshold']) : 25;
+    $dry_run = isset($_POST['dry_run']) ? true : false;
 
-	$process_limit  = min( 100, max( 1, intval( $_POST['process_limit'] ) ) );
-	$days_threshold = max( 1, intval( $_POST['days_threshold'] ) );
-	$dry_run        = isset( $_POST['dry_run'] ) ? true : false;
-
-	require_once '../payments/SimplePayV21.php';
-	require_once '../payments/SimplePayV21CardStorage.php';
-
-	// Get future recurring payments that are due
-	$sql = "SELECT rec.*
-        FROM
-            {$wpdb->prefix}furik_transactions AS rec
-            JOIN {$wpdb->prefix}furik_transactions AS ptr ON (rec.parent=ptr.id)
-        WHERE rec.time <= now()
-            AND rec.transaction_status in (" . FURIK_STATUS_FUTURE . ')
-            AND ptr.transaction_status in (1, 10)
-        ORDER BY time ASC
-        LIMIT ' . $process_limit;
-
-	$payments = $wpdb->get_results( $sql );
-
-	echo '<div class="wrap">';
-	echo '<h2>' . __( 'Process Recurring Payments Results', 'furik' ) . '</h2>';
-	echo '<p>' . sprintf( __( 'Processing up to %d recurring payments', 'furik' ), $process_limit ) . '</p>';
-
-	echo '<table class="wp-list-table widefat fixed striped results-table">';
-	echo '<thead><tr>';
-	echo '<th>' . __( 'ID', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Transaction ID', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Amount', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Scheduled Date', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Last Payment', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Days Since Last', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Status', 'furik' ) . '</th>';
-	echo '<th>' . __( 'Result', 'furik' ) . '</th>';
-	echo '</tr></thead>';
-	echo '<tbody>';
-
-	$processed_count  = 0;
-	$successful_count = 0;
-	$failed_count     = 0;
-	$skipped_count    = 0;
-
-	foreach ( $payments as $payment ) {
-		// Get previous transaction date
-		$previous_date = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT transaction_time
-                FROM {$wpdb->prefix}furik_transactions
-                WHERE transaction_time is not null
-                    AND (id = %d OR parent = %d)
-                ORDER BY id DESC
-                LIMIT 1",
-				$payment->parent,
-				$payment->parent
-			)
-		);
-
-		$days_since_last = 'N/A';
-		$time_diff       = 0;
-		$status          = '';
-		$result          = '';
-		$status_class    = '';
-
-		if ( $previous_date ) {
-			$time_diff       = time() - strtotime( $previous_date );
-			$days_since_last = round( $time_diff / ( 60 * 60 * 24 ) );
-
-			if ( $days_since_last < $days_threshold ) {
-				$status = __( 'Skipped', 'furik' );
-				$result = sprintf( __( 'Last payment was only %1$d days ago (threshold: %2$d days)', 'furik' ), $days_since_last, $days_threshold );
-				++$skipped_count;
-				$status_class = 'status-skipped';
-			} else {
-				$status       = $dry_run ? __( 'Ready (Dry Run)', 'furik' ) : __( 'Processing', 'furik' );
-				$status_class = 'status-warning';
-
-				if ( ! $dry_run ) {
-					$trx = new SimplePayDorecurring();
-					$trx->addConfig( furik_get_simple_config() );
-					$trx->addData( 'orderRef', $payment->transaction_id );
-					$trx->addData( 'methods', array( 'CARD' ) );
-					$trx->addData( 'currency', 'HUF' );
-					$trx->addData( 'total', $payment->amount );
-					$trx->addData( 'customerEmail', $payment->email );
-					$trx->addData( 'token', $payment->token );
-					$trx->runDorecurring();
-
-					$returnData = $trx->getReturnData();
-					furik_transaction_log( $payment->transaction_id, serialize( $returnData ) );
-
-					$newStatus = $returnData['total'] > 0 ? FURIK_STATUS_SUCCESSFUL : FURIK_STATUS_RECURRING_FAILED;
-
-					$wpdb->update(
-						"{$wpdb->prefix}furik_transactions",
-						array(
-							'transaction_status' => $newStatus,
-							'transaction_time'   => date( 'Y-m-d H:i:s' ),
-						),
-						array( 'id' => $payment->id )
-					);
-
-					if ( $newStatus == FURIK_STATUS_SUCCESSFUL ) {
-						$status = __( 'Success', 'furik' );
-						$result = sprintf( __( 'Payment successful: %d HUF', 'furik' ), $payment->amount );
-						++$successful_count;
-						$status_class = 'status-success';
-					} else {
-						$status = __( 'Failed', 'furik' );
-						$result = isset( $returnData['errorCodes'] ) && ! empty( $returnData['errorCodes'] ) ?
-								sprintf( __( 'Error code: %s', 'furik' ), $returnData['errorCodes'][0] ) :
-								__( 'Unknown error', 'furik' );
-						++$failed_count;
-						$status_class = 'status-error';
-
-						// Handle failure types that require cancelling future transactions
-						if ( isset( $returnData['errorCodes'] ) &&
-							( in_array( 2063, $returnData['errorCodes'] ) || in_array( 2072, $returnData['errorCodes'] ) ) ) {
-
-							$wpdb->update(
-								"{$wpdb->prefix}furik_transactions",
-								array(
-									'transaction_status' => FURIK_STATUS_RECURRING_PAST_FAILED,
-									'transaction_time'   => date( 'Y-m-d H:i:s' ),
-								),
-								array(
-									'parent'             => $payment->parent,
-									'transaction_status' => FURIK_STATUS_FUTURE,
-								)
-							);
-
-							$result .= ' ' . __( 'All future recurring payments cancelled due to payment failure.', 'furik' );
-						}
-					}
-
-					++$processed_count;
-				} else {
-					$result = __( 'Would process this payment (dry run)', 'furik' );
-				}
-			}
-		} else {
-			$status = __( 'Error', 'furik' );
-			$result = __( 'No previous transaction found', 'furik' );
-			++$skipped_count;
-			$status_class = 'status-error';
-		}
-
-		echo '<tr data-status="' . esc_attr( $status_class ) . '">';
-		echo '<td>' . esc_html( $payment->id ) . '</td>';
-		echo '<td>' . esc_html( $payment->transaction_id ) . '</td>';
-		echo '<td>' . esc_html( number_format( $payment->amount, 0, ',', ' ' ) ) . ' HUF</td>';
-		echo '<td class="date-display">' . esc_html( $payment->time ) . '</td>';
-		echo '<td class="date-display">' . esc_html( $previous_date ?: 'N/A' ) . '</td>';
-		echo '<td>' . esc_html( $days_since_last ) . '</td>';
-		echo '<td class="' . esc_attr( $status_class ) . '">' . esc_html( $status ) . '</td>';
-		echo '<td>' . esc_html( $result ) . '</td>';
-		echo '</tr>';
-	}
-
-	echo '</tbody></table>';
-
-	// Add a filter dropdown for the results table
-	if ( count( $payments ) > 0 ) {
-		echo '<div class="tablenav bottom">';
-		echo '<div class="alignleft actions">';
-		echo '<label for="filter-status" class="screen-reader-text">' . __( 'Filter by status', 'furik' ) . '</label>';
-		echo '<select id="filter-status">';
-		echo '<option value="all">' . __( 'All statuses', 'furik' ) . '</option>';
-		echo '<option value="status-success">' . __( 'Success', 'furik' ) . '</option>';
-		echo '<option value="status-error">' . __( 'Error', 'furik' ) . '</option>';
-		echo '<option value="status-warning">' . __( 'Warning', 'furik' ) . '</option>';
-		echo '<option value="status-skipped">' . __( 'Skipped', 'furik' ) . '</option>';
-		echo '</select>';
-		echo '</div>';
-		echo '</div>';
-	}
-
-	echo '<div class="results-summary notice notice-' . ( $dry_run ? 'info' : 'success' ) . '"><p>';
-	if ( $dry_run ) {
-		printf(
-			__( 'DRY RUN ONLY - Found %1$d total payments (%2$d would be skipped, %3$d would be processed).', 'furik' ),
-			count( $payments ),
-			$skipped_count,
-			count( $payments ) - $skipped_count
-		);
-	} else {
-		printf(
-			__( 'Processed %1$d payments: %2$d successful, %3$d failed, %4$d skipped.', 'furik' ),
-			$processed_count,
-			$successful_count,
-			$failed_count,
-			$skipped_count
-		);
-	}
-	echo '</p></div>';
-
-	echo '<p><a href="' . admin_url( 'admin.php?page=furik-batch-tools&tab=process_recurring' ) . '" class="button">' . __( 'Back to Processing Tool', 'furik' ) . '</a></p>';
-
-	echo '</div>';
+    // Process payments and generate HTML output
+    echo furik_process_recurring_payments($process_limit, $days_threshold, $dry_run, 'html');
 }
 
 /**
@@ -959,3 +764,4 @@ function furik_process_find_duplicates() {
 	echo '<p><a href="' . admin_url( 'admin.php?page=furik-batch-tools&tab=find_duplicates' ) . '" class="button">' . __( 'Back to Duplicate Finder', 'furik' ) . '</a></p>';
 	echo '</div>';
 }
+
