@@ -29,7 +29,7 @@ jobs:
       - name: Prepare build directory
         run: |
           mkdir -p build/furik
-          cp -r includes admin payments shortcodes assets templates lang *.php *.md LICENSE build/furik/
+          cp -r includes admin payments shortcodes assets images templates lang *.php *.md LICENSE build/furik/
           
       - name: Generate .mo files
         run: |
