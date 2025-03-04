@@ -36,16 +36,11 @@ jobs:
           cd build/furik
           msgfmt -o lang/furik-hu_HU.mo lang/furik-hu_HU.po
         
-      - name: Create plugin zip
-        run: |
-          cd build
-          zip -r furik.zip furik
-        
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: furik-plugin
-          path: build/furik.zip
+          path: build/furik
           
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
