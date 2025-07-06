@@ -28,7 +28,10 @@ EOT;
 	);
 
 	if ( $a['parent_campaign'] === null ) {
-		$post      = get_post();
+		$post = get_post();
+		if ( ! $post ) {
+			return '';
+		}
 		$campaigns = get_posts(
 			array(
 				'post_parent' => $post->ID,
@@ -50,7 +53,8 @@ EOT;
 
 	foreach ( $campaigns as $campaign ) {
 
-		if ( $except = explode( ',', $a['except'] ) ) {
+		if ( $a['except'] !== null ) {
+			$except = explode( ',', $a['except'] );
 			if ( in_array( $campaign->ID, $except ) ) {
 				continue;
 			}
@@ -68,17 +72,18 @@ EOT;
 			ORDER BY time DESC';
 
 		$collected = $wpdb->get_var( $sql );
+		$collected = $collected ? intval( $collected ) : 0;
 
 		$r .= strtr(
 			$a['layout'],
 			array(
 				'{url}'          => $campaign->guid,
-				'{image}'        => ( @$meta['IMAGE'][0] ?: $a['default_image'] ),
+				'{image}'        => ( isset( $meta['IMAGE'][0] ) ? $meta['IMAGE'][0] : $a['default_image'] ),
 				'{title}'        => esc_html( $campaign->post_title ),
 				'{excerpt}'      => esc_html( $campaign->post_excerpt ),
-				'{progress_bar}' => $progress['progress_bar'],
-				'{percentage}'   => $progress['percentage'],
-				'{goal}'         => number_format( $progress['goal'], 0, ',', ' ' ),
+				'{progress_bar}' => isset( $progress['progress_bar'] ) ? $progress['progress_bar'] : '',
+				'{percentage}'   => isset( $progress['percentage'] ) ? $progress['percentage'] : '0',
+				'{goal}'         => isset( $progress['goal'] ) ? number_format( $progress['goal'], 0, ',', ' ' ) : '0',
 				'{collected}'    => number_format( $collected, 0, ',', ' ' ),
 			)
 		);

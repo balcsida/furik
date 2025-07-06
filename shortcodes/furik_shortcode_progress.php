@@ -12,11 +12,15 @@ function furik_shortcode_progress( $atts ) {
 
 	global $wpdb;
 
-	$post   = get_post();
+	$post = get_post();
+	if ( ! $post ) {
+		return '';
+	}
+
 	$amount = $a['amount'];
 	if ( ! $amount ) {
 		$meta = get_post_custom( $post->ID );
-		if ( is_numeric( $meta['GOAL'][0] ) ) {
+		if ( isset( $meta['GOAL'][0] ) && is_numeric( $meta['GOAL'][0] ) ) {
 			$amount = $meta['GOAL'][0];
 		}
 	}
@@ -33,7 +37,8 @@ function furik_shortcode_progress( $atts ) {
 	foreach ( $campaigns as $campaign ) {
 		$ids[] = $campaign->ID;
 	}
-	$id_list = implode( $ids, ',' );
+	// Fixed: implode() parameters were in wrong order
+	$id_list = implode( ',', $ids );
 
 	$sql = "SELECT
 			sum(amount)
@@ -45,7 +50,10 @@ function furik_shortcode_progress( $atts ) {
 		ORDER BY time DESC';
 
 	$result = $wpdb->get_var( $sql );
+	$result = $result ? intval( $result ) : 0;
 
+	// Initialize $r variable
+	$r = '';
 	$r .= '<p class="furik-collected">' . number_format( $result, 0, ',', ' ' ) . ' Ft</p>';
 
 	if ( $amount > 0 ) {

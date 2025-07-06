@@ -53,7 +53,7 @@ function furik_load_template( $_template_file, $args = array() ) {
 }
 
 function furik_numr( $name, $def = 0 ) {
-	return is_numeric( $_REQUEST[ $name ] ) ? $_REQUEST[ $name ] : $def;
+	return ( isset( $_REQUEST[ $name ] ) && is_numeric( $_REQUEST[ $name ] ) ) ? $_REQUEST[ $name ] : $def;
 }
 
 function furik_order_sign( $order_ref ) {
@@ -109,7 +109,7 @@ function furik_url( $uri, $parameters = array(), $add_proto = true ) {
 		$url .= ( $furik_homepage_https ? 'https' : 'http' ) . '://';
 	}
 
-	$url .= $furik_homepage_url . $uri;
+	$url .= $furik_homepage_url . '/' . ltrim( $uri, '/' );
 
 	if ( count( $parameters ) ) {
 		foreach ( $parameters as $key => $value ) {

@@ -15,7 +15,11 @@ function furik_shortcode_donations( $atts ) {
 </div>
 EOT;
 
-	$post      = get_post();
+	$post = get_post();
+	if ( ! $post ) {
+		return '';
+	}
+
 	$campaigns = get_posts(
 		array(
 			'post_parent' => $post->ID,
@@ -35,7 +39,8 @@ EOT;
 	foreach ( $campaigns as $campaign ) {
 		$ids[] = $campaign->ID;
 	}
-	$id_list = implode( $ids, ',' );
+	// Fixed: implode() parameters were in wrong order
+	$id_list = implode( ',', $ids );
 
 	$sql = "SELECT
 			transaction.*,
@@ -50,17 +55,19 @@ EOT;
 
 	$result = $wpdb->get_results( $sql );
 
+	// Initialize $r variable
+	$r = '';
+
 	if ( ! count( $result ) ) {
 		$r .= __( 'No donations yet. Be the first one!', 'furik' );
 	} else {
-		$r .= '';
 		foreach ( $result as $donation ) {
 			$r .= strtr(
 				$a['layout'],
 				array(
 					'{url}'           => '/?post_type=campaign&p=' . $donation->campaign_id,
 					'{datetime}'      => $donation->time,
-					'{date_ymd}'      => date( 'Y-m-d', $donation->time ),
+					'{date_ymd}'      => date( 'Y-m-d', strtotime( $donation->time ) ),
 					'{relative_date}' => time2str( $donation->time . ' ' . get_option( 'timezone_string' ) ),
 					'{name}'          => ( $donation->anon ? __( 'Anonymous donation', 'furik' ) : esc_html( $donation->name ) ),
 					'{amount}'        => number_format( $donation->amount, 0, ',', ' ' ),

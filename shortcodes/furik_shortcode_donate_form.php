@@ -15,16 +15,18 @@ function furik_shortcode_donate_form( $atts ) {
 		$atts
 	);
 
-	$amount = is_numeric( $_GET['furik_amount'] ) ? $_GET['furik_amount'] : $atts['amount'];
+	// Check if furik_amount exists in $_GET before accessing it
+	$amount = ( isset( $_GET['furik_amount'] ) && is_numeric( $_GET['furik_amount'] ) ) ? $_GET['furik_amount'] : $a['amount'];
 
-	if ( is_numeric( $_GET['furik_campaign'] ) ) {
+	// Check if furik_campaign exists in $_GET before accessing it
+	if ( isset( $_GET['furik_campaign'] ) && is_numeric( $_GET['furik_campaign'] ) ) {
 		$post = get_post( $_GET['furik_campaign'] );
 	} else {
 		$post = get_post();
 	}
 
 	$amount_content = '';
-	if ( $post->post_type == 'campaign' ) {
+	if ( $post && $post->post_type == 'campaign' ) {
 		$campaign    = $post->post_title;
 		$campaign_id = $post->ID;
 		$meta        = get_post_custom( $post->ID );
@@ -39,6 +41,7 @@ function furik_shortcode_donate_form( $atts ) {
 		}
 	} else {
 		$campaign = __( 'General donation', 'furik' );
+		$campaign_id = 0;
 	}
 
 	return furik_load_template( 'furik_donate_form.php', get_defined_vars() );

@@ -111,7 +111,7 @@ class Donations_List extends WP_List_Table {
 	}
 
 	public static function get_filter_query() {
-		if ( is_numeric( $_GET['filter_by_parent'] ) ) {
+		if ( isset( $_GET['filter_by_parent'] ) && is_numeric( $_GET['filter_by_parent'] ) ) {
 			$parent_id = $_GET['filter_by_parent'];
 			return "(tr.id = $parent_id OR tr.parent=$parent_id)";
 		} else {
