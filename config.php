@@ -44,9 +44,15 @@ $furik_email_change_sender = false;
 * Google reCAPTCHA v3 settings
 * Get your keys from: https://www.google.com/recaptcha/admin
 */
-$furik_recaptcha_enabled = true;
+$furik_recaptcha_enabled = false;
 $furik_recaptcha_site_key = 'YOUR_V3_SITE_KEY_HERE';
 $furik_recaptcha_secret_key = 'YOUR_V3_SECRET_KEY_HERE';
 $furik_recaptcha_threshold = 0.5; // Score threshold (0.0-1.0), lower values are more permissive
+
+/**
+* Google reCAPTCHA v2 settings (for fallback)
+*/
+$furik_recaptcha_v2_site_key = 'YOUR_V2_SITE_KEY_HERE';
+$furik_recaptcha_v2_secret_key = 'YOUR_V2_SECRET_KEY_HERE';
 
 @require_once 'config_local.php';
