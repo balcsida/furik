@@ -31,6 +31,7 @@ require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_donate_form.php';
 require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_donate_link.php';
 require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_donation_sum.php';
 require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_donations.php';
+require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_donor_feed.php';
 require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_order_ref.php';
 require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_payment_info.php';
 require_once FURIK_PLUGIN_DIR . 'shortcodes/furik_shortcode_progress.php';
