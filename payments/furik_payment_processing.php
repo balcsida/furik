@@ -43,6 +43,151 @@ function furik_verify_recaptcha( $token ) {
 	);
 }
 
+/**
+ * Verify reCAPTCHA v2 token
+ *
+ * @param string $token The reCAPTCHA v2 token from the client
+ * @return bool Returns true if verification successful, false otherwise
+ */
+function furik_verify_recaptcha_v2( $token ) {
+	global $furik_recaptcha_v2_secret_key;
+
+	if ( empty( $furik_recaptcha_v2_secret_key ) || empty( $token ) ) {
+		return false;
+	}
+
+	$verify_url = 'https://www.google.com/recaptcha/api/siteverify';
+
+	$response = wp_remote_post( $verify_url, array(
+		'body' => array(
+			'secret' => $furik_recaptcha_v2_secret_key,
+			'response' => $token,
+			'remoteip' => $_SERVER['REMOTE_ADDR']
+		)
+	));
+
+	if ( is_wp_error( $response ) ) {
+		error_log( 'Furik reCAPTCHA v2 error: ' . $response->get_error_message() );
+		return false;
+	}
+
+	$body = wp_remote_retrieve_body( $response );
+	$result = json_decode( $body, true );
+
+	return isset( $result['success'] ) && $result['success'];
+}
+
+/**
+ * Show reCAPTCHA v2 challenge page
+ */
+function furik_show_recaptcha_v2_challenge() {
+	global $furik_recaptcha_v2_site_key;
+	
+	// Preserve all POST data
+	$preserved_data = array();
+	foreach ( $_POST as $key => $value ) {
+		if ( $key !== 'furik_recaptcha_token' && $key !== 'g-recaptcha-response' ) {
+			$preserved_data[$key] = $value;
+		}
+	}
+	
+	?>
+	<!DOCTYPE html>
+	<html <?php language_attributes(); ?>>
+	<head>
+		<meta charset="<?php bloginfo( 'charset' ); ?>">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title><?php _e( 'Security Verification', 'furik' ); ?></title>
+		<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+				background: #f1f1f1;
+				margin: 0;
+				padding: 20px;
+			}
+			.verification-container {
+				max-width: 500px;
+				margin: 50px auto;
+				background: #fff;
+				padding: 30px;
+				border-radius: 8px;
+				box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+			}
+			h2 {
+				color: #333;
+				margin-top: 0;
+			}
+			.message {
+				color: #666;
+				margin-bottom: 20px;
+				line-height: 1.5;
+			}
+			.recaptcha-container {
+				margin: 20px 0;
+				display: flex;
+				justify-content: center;
+			}
+			.submit-button {
+				text-align: center;
+				margin-top: 20px;
+			}
+			.submit-button button {
+				background: #0073aa;
+				color: #fff;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+			}
+			.submit-button button:hover {
+				background: #005a87;
+			}
+			.submit-button button:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="verification-container">
+			<h2><?php _e( 'Additional Verification Required', 'furik' ); ?></h2>
+			<p class="message">
+				<?php _e( 'For security purposes, please complete the verification below to continue with your donation.', 'furik' ); ?>
+			</p>
+			
+			<form method="POST" action="<?php echo esc_url( $_SERVER['REQUEST_URI'] ); ?>" id="recaptcha-form">
+				<?php foreach ( $preserved_data as $key => $value ) : ?>
+					<?php if ( is_array( $value ) ) : ?>
+						<?php foreach ( $value as $subvalue ) : ?>
+							<input type="hidden" name="<?php echo esc_attr( $key ); ?>[]" value="<?php echo esc_attr( $subvalue ); ?>">
+						<?php endforeach; ?>
+					<?php else : ?>
+						<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>">
+					<?php endif; ?>
+				<?php endforeach; ?>
+				
+				<div class="recaptcha-container">
+					<div class="g-recaptcha" data-sitekey="<?php echo esc_attr( $furik_recaptcha_v2_site_key ); ?>" data-callback="enableSubmit"></div>
+				</div>
+				
+				<div class="submit-button">
+					<button type="submit" id="submit-btn" disabled><?php _e( 'Continue', 'furik' ); ?></button>
+				</div>
+			</form>
+		</div>
+		
+		<script>
+			function enableSubmit() {
+				document.getElementById('submit-btn').disabled = false;
+			}
+		</script>
+	</body>
+	</html>
+	<?php
+}
+
 function furik_cancel_recurring( $vendor_ref ) {
 	global $furik_payment_merchant;
 
@@ -226,18 +371,32 @@ function furik_process_payment_form() {
 	// Verify reCAPTCHA if enabled
 	$recaptcha_score = null;
 	if ( $furik_recaptcha_enabled ) {
-		$recaptcha_token = isset( $_POST['furik_recaptcha_token'] ) ? sanitize_text_field( $_POST['furik_recaptcha_token'] ) : '';
-
-		if ( empty( $recaptcha_token ) ) {
+	// Check if this is a V2 verification
+	$recaptcha_v2_token = isset( $_POST['g-recaptcha-response'] ) ? sanitize_text_field( $_POST['g-recaptcha-response'] ) : '';
+	
+	if ( ! empty( $recaptcha_v2_token ) ) {
+		// This is a V2 verification
+		if ( ! furik_verify_recaptcha_v2( $recaptcha_v2_token ) ) {
 			wp_die(
-				__( 'Security verification failed. Please enable JavaScript and try again.', 'furik' ),
+				__( 'Security verification failed. Please try again.', 'furik' ),
 				__( 'Verification Failed', 'furik' ),
 				array( 'response' => 400 )
 			);
 		}
-
+		// V2 passed, set score to 1.0 to indicate manual verification
+		$recaptcha_score = 1.0;
+	} else {
+		// This is a V3 verification
+		$recaptcha_token = isset( $_POST['furik_recaptcha_token'] ) ? sanitize_text_field( $_POST['furik_recaptcha_token'] ) : '';
+		
+		if ( empty( $recaptcha_token ) ) {
+			// No token provided, show V2 challenge
+			furik_show_recaptcha_v2_challenge();
+			exit;
+		}
+		
 		$recaptcha_result = furik_verify_recaptcha( $recaptcha_token );
-
+		
 		if ( ! $recaptcha_result ) {
 			wp_die(
 				__( 'Security verification failed. Please try again later.', 'furik' ),
@@ -245,9 +404,9 @@ function furik_process_payment_form() {
 				array( 'response' => 400 )
 			);
 		}
-
+		
 		$recaptcha_score = $recaptcha_result['score'];
-
+		
 		// Check if score is below threshold
 		if ( $recaptcha_score < $furik_recaptcha_threshold ) {
 			// Log suspicious activity
@@ -258,20 +417,11 @@ function furik_process_payment_form() {
 				$_SERVER['REMOTE_ADDR'],
 				isset( $_POST['furik_form_email'] ) ? $_POST['furik_form_email'] : 'unknown'
 			));
-
-			// Challenge the user - show a friendly message
-			wp_die(
-				sprintf(
-					__( 'We need to verify that you are human. Your verification score (%s) is below our threshold (%s). This might happen if you are using a VPN, privacy tools, or automated software. Please try again, or contact us directly if you continue to have issues.', 'furik' ),
-					number_format( $recaptcha_score, 2 ),
-					number_format( $furik_recaptcha_threshold, 2 )
-				),
-				__( 'Additional Verification Required', 'furik' ),
-				array(
-					'response' => 403,
-					'back_link' => true
-				)
-			);
+			
+			// Show V2 challenge instead of dying
+			furik_show_recaptcha_v2_challenge();
+			exit;
+			}
 		}
 	}
 

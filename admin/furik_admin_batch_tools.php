@@ -56,19 +56,28 @@ add_action( 'admin_enqueue_scripts', 'furik_batch_tools_scripts' );
  * The Batch Tools admin page
  */
 function furik_batch_tools_page() {
+	// Check if we're processing results (don't show tabs when results are being displayed)
+	$show_tabs = true;
+	
 	// Process batch cancel form submission
 	if ( isset( $_POST['furik_action'] ) && $_POST['furik_action'] === 'batch_cancel' ) {
+		$show_tabs = false;
 		furik_process_batch_cancel();
+		return;
 	}
 
 	// Process recurring payments form submission
 	if ( isset( $_POST['furik_action'] ) && $_POST['furik_action'] === 'process_recurring' ) {
+		$show_tabs = false;
 		furik_process_batch_recurring();
+		return;
 	}
 
 	// Process duplicate finder form submission
 	if ( isset( $_POST['furik_action'] ) && $_POST['furik_action'] === 'find_duplicates' ) {
+		$show_tabs = false;
 		furik_process_find_duplicates();
+		return;
 	}
 
 	// Determine active tab
@@ -541,18 +550,18 @@ function furik_process_find_duplicates() {
             GROUP_CONCAT(time ORDER BY time) as registration_dates,
             GROUP_CONCAT(amount ORDER BY time) as amounts,
             GROUP_CONCAT(
-                (SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions 
-                 WHERE parent = t.id AND transaction_status = " . FURIK_STATUS_FUTURE . ")
+                IFNULL((SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions 
+                 WHERE parent = t.id AND transaction_status = " . FURIK_STATUS_FUTURE . "), 0)
                 ORDER BY time
             ) as future_counts,
             GROUP_CONCAT(
-                (SELECT SUM(amount) FROM {$wpdb->prefix}furik_transactions 
-                 WHERE (parent = t.id OR id = t.id) AND transaction_status IN (" . FURIK_STATUS_SUCCESSFUL . ', ' . FURIK_STATUS_IPN_SUCCESSFUL . "))
+                IFNULL((SELECT SUM(amount) FROM {$wpdb->prefix}furik_transactions 
+                 WHERE (parent = t.id OR id = t.id) AND transaction_status IN (" . FURIK_STATUS_SUCCESSFUL . ', ' . FURIK_STATUS_IPN_SUCCESSFUL . ")), 0)
                 ORDER BY time
             ) as collected_amounts,
             GROUP_CONCAT(
-                (SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions 
-                 WHERE (parent = t.id OR id = t.id) AND transaction_status IN (" . FURIK_STATUS_SUCCESSFUL . ', ' . FURIK_STATUS_IPN_SUCCESSFUL . "))
+                IFNULL((SELECT COUNT(*) FROM {$wpdb->prefix}furik_transactions 
+                 WHERE (parent = t.id OR id = t.id) AND transaction_status IN (" . FURIK_STATUS_SUCCESSFUL . ', ' . FURIK_STATUS_IPN_SUCCESSFUL . ")), 0)
                 ORDER BY time
             ) as successful_counts
         FROM {$wpdb->prefix}furik_transactions as t
@@ -764,4 +773,3 @@ function furik_process_find_duplicates() {
 	echo '<p><a href="' . admin_url( 'admin.php?page=furik-batch-tools&tab=find_duplicates' ) . '" class="button">' . __( 'Back to Duplicate Finder', 'furik' ) . '</a></p>';
 	echo '</div>';
 }
-

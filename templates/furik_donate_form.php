@@ -67,7 +67,10 @@ global $furik_recaptcha_enabled, $furik_recaptcha_site_key;
 						// Handle error
 						submitBtn.value = originalText;
 						submitBtn.disabled = false;
-						alert('<?php echo esc_js( __( 'reCAPTCHA verification failed. Please try again.', 'furik' ) ); ?>');
+						console.error('reCAPTCHA error:', error);
+						alert('<?php echo esc_js( __( 'Security verification failed. You will be redirected to complete additional verification.', 'furik' ) ); ?>');
+						// Submit form anyway - backend will show V2 challenge
+						form.submit();
 					});
 				});
 				<?php endif; ?>
