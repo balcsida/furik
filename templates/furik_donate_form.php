@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+global $furik_recaptcha_enabled, $furik_recaptcha_site_key;
+
 ?><script type="text/javascript">
 	function toggle_data_transmission() {
 		var monthly = document.getElementById("furik_form_recurring_1");
@@ -26,6 +28,54 @@ if ( ! defined( 'ABSPATH' ) ) {
 		}
 	}
 </script>
+
+<?php if ( $furik_recaptcha_enabled && $furik_recaptcha_site_key ) : ?>
+<script src="https://www.google.com/recaptcha/api.js?render=<?php echo esc_attr( $furik_recaptcha_site_key ); ?>"></script>
+<script>
+	// Execute reCAPTCHA when form is submitted
+	document.addEventListener('DOMContentLoaded', function() {
+		var form = document.querySelector('form[action="<?php echo $_SERVER['REQUEST_URI']; ?>"]');
+		if (form) {
+			form.addEventListener('submit', function(e) {
+				<?php if ( $furik_recaptcha_enabled && $furik_recaptcha_site_key ) : ?>
+				e.preventDefault();
+				
+				// Show loading state on submit button
+				var submitBtn = document.getElementById('furik_form_submit_button');
+				var originalText = submitBtn.value;
+				submitBtn.value = '<?php echo esc_js( __( 'Verifying...', 'furik' ) ); ?>';
+				submitBtn.disabled = true;
+				
+				grecaptcha.ready(function() {
+					grecaptcha.execute('<?php echo esc_js( $furik_recaptcha_site_key ); ?>', {action: 'submit_donation'}).then(function(token) {
+						// Add token to form
+						var tokenInput = document.getElementById('furik_recaptcha_token');
+						if (!tokenInput) {
+							tokenInput = document.createElement('input');
+							tokenInput.type = 'hidden';
+							tokenInput.id = 'furik_recaptcha_token';
+							tokenInput.name = 'furik_recaptcha_token';
+							form.appendChild(tokenInput);
+						}
+						tokenInput.value = token;
+						
+						// Submit the form
+						submitBtn.value = originalText;
+						submitBtn.disabled = false;
+						form.submit();
+					}).catch(function(error) {
+						// Handle error
+						submitBtn.value = originalText;
+						submitBtn.disabled = false;
+						alert('<?php echo esc_js( __( 'reCAPTCHA verification failed. Please try again.', 'furik' ) ); ?>');
+					});
+				});
+				<?php endif; ?>
+			});
+		}
+	});
+</script>
+<?php endif; ?>
 
 <form method="POST" action="<?php echo $_SERVER['REQUEST_URI']; ?>">
 	<input type="hidden" name="furik_action" value="process_payment_form"/>
@@ -161,6 +211,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<input type="checkbox" name="furik_form_newsletter" id="furik_form_newsletter" class="form-check-input">
 				<?php echo __( 'Subscribe to our newsletter', 'furik' ); ?>
 			</label>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( $furik_recaptcha_enabled && $furik_recaptcha_site_key ) : ?>
+		<div class="furik-recaptcha-notice" style="margin-top: 10px; font-size: 0.9em; color: #666;">
+			<?php echo __( 'This site is protected by reCAPTCHA and the Google', 'furik' ); ?>
+			<a href="https://policies.google.com/privacy" target="_blank"><?php echo __( 'Privacy Policy', 'furik' ); ?></a> <?php echo __( 'and', 'furik' ); ?>
+			<a href="https://policies.google.com/terms" target="_blank"><?php echo __( 'Terms of Service', 'furik' ); ?></a> <?php echo __( 'apply.', 'furik' ); ?>
 		</div>
 	<?php endif; ?>
 

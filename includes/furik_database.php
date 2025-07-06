@@ -19,6 +19,8 @@ define( 'FURIK_TRANSACTION_TYPE_RECURRING_AUTO', 4 );
 define( 'FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_REG', 5 );
 define( 'FURIK_TRANSACTION_TYPE_RECURRING_TRANSFER_AUTO', 6 );
 
+define( 'FURIK_DB_VERSION', 2 );
+
 function furik_get_transaction( $order_ref ) {
 	global $wpdb;
 
@@ -59,6 +61,7 @@ function furik_install() {
 		token varchar(255),
 		token_validity datetime,
 		newsletter_status int,
+		recaptcha_score float DEFAULT NULL,
 		PRIMARY KEY  (id)
 	) $charset_collate;";
 
@@ -74,7 +77,29 @@ function furik_install() {
 	dbDelta( $sql_transactions );
 	dbDelta( $sql_transaction_log );
 
-	add_option( 'furik_db_version', 1 );
+	// Check current database version
+	$current_version = get_option( 'furik_db_version', 0 );
+
+	// Perform upgrades based on version
+	if ( $current_version < 2 ) {
+		// Add recaptcha_score column if it doesn't exist
+		$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}furik_transactions LIKE 'recaptcha_score'" );
+		if ( empty( $column_exists ) ) {
+			$wpdb->query( "ALTER TABLE {$wpdb->prefix}furik_transactions ADD COLUMN recaptcha_score FLOAT DEFAULT NULL AFTER newsletter_status" );
+		}
+	}
+
+	update_option( 'furik_db_version', FURIK_DB_VERSION );
+}
+
+// Hook to run database upgrades on plugin update
+add_action( 'plugins_loaded', 'furik_check_db_version' );
+
+function furik_check_db_version() {
+	$current_version = get_option( 'furik_db_version', 0 );
+	if ( $current_version < FURIK_DB_VERSION ) {
+		furik_install();
+	}
 }
 
 function furik_progress( $campaign_id, $amount = 0 ) {

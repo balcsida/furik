@@ -29,6 +29,23 @@ class Donations_List extends WP_List_Table {
 		return $item['campaign_name'] . ' (' . $item['parent_campaign_name'] . ')';
 	}
 
+	public function column_recaptcha_score( $item ) {
+		if ( is_null( $item['recaptcha_score'] ) ) {
+			return '<span style="color: #999;">N/A</span>';
+		}
+		
+		$score = floatval( $item['recaptcha_score'] );
+		$color = '#46b450'; // Green by default
+		
+		if ( $score < 0.3 ) {
+			$color = '#dc3232'; // Red for very low scores
+		} elseif ( $score < 0.5 ) {
+			$color = '#ffb900'; // Yellow for medium scores
+		}
+		
+		return '<span style="color: ' . $color . '; font-weight: bold;">' . number_format( $score, 2 ) . '</span>';
+	}
+
 	public function column_transaction_status( $item ) {
 		switch ( $item['transaction_status'] ) {
 			case '':
@@ -135,6 +152,8 @@ class Donations_List extends WP_List_Table {
 	}
 
 	function get_columns() {
+		global $furik_recaptcha_enabled;
+		
 		$columns = array(
 			'transaction_id' => __( 'ID', 'furik' ),
 			'time'           => __( 'Time', 'furik' ),
@@ -151,10 +170,34 @@ class Donations_List extends WP_List_Table {
 			'message'            => __( 'Message', 'furik' ),
 			'anon'               => __( 'Anonymity', 'furik' ),
 			'newsletter_status'  => __( 'Newsletter Status', 'furik' ),
+		);
+		
+		// Add reCAPTCHA score column if enabled
+		if ( $furik_recaptcha_enabled ) {
+			$columns += array( 'recaptcha_score' => __( 'reCAPTCHA Score', 'furik' ) );
+		}
+		
+		$columns += array(
 			'transaction_status' => __( 'Status', 'furik' ),
 		);
 
 		return $columns;
+	}
+
+	public function get_sortable_columns() {
+		$sortable_columns = array(
+			'transaction_id'     => array( 'transaction_id', false ),
+			'time'               => array( 'time', true ),
+			'name'               => array( 'name', false ),
+			'email'              => array( 'email', false ),
+			'amount'             => array( 'amount', false ),
+			'transaction_type'   => array( 'transaction_type', false ),
+			'campaign_name'      => array( 'campaign', false ),
+			'recaptcha_score'    => array( 'recaptcha_score', false ),
+			'transaction_status' => array( 'transaction_status', false ),
+		);
+
+		return $sortable_columns;
 	}
 
 	public function prepare_items() {
@@ -204,7 +247,7 @@ class Donations_List_Plugin {
 	}
 
 	public function donations_list_page() {
-		global $wpdb;
+		global $wpdb, $furik_recaptcha_enabled;
 
 		if ( isset( $_GET['action'] ) && $_GET['action'] == 'approve' && isset( $_GET['campaign'] ) ) {
 			$wpdb->update(
@@ -229,6 +272,13 @@ class Donations_List_Plugin {
 		</style>
 		<div class="wrap">
 			<h1 class="wp-heading-inline"><?php _e( 'Donations', 'furik' ); ?></h1>
+			
+			<?php if ( $furik_recaptcha_enabled ) : ?>
+			<div class="notice notice-info" style="margin-top: 15px;">
+				<p><?php _e( 'reCAPTCHA v3 Score: 0.0 (likely bot) to 1.0 (likely human). Scores below 0.3 are highlighted in red, 0.3-0.5 in yellow, and above 0.5 in green.', 'furik' ); ?></p>
+			</div>
+			<?php endif; ?>
+			
 			<div id="poststuff">
 				<div id="post-body" class="metabox-holder">
 					<div id="post-body-content">
@@ -250,7 +300,7 @@ class Donations_List_Plugin {
 		<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/dt-1.10.23/b-1.6.5/b-html5-1.6.5/datatables.min.js"></script>
 		<script>
 		jQuery(document).ready( function () {
-			jQuery('.tmogatsok').DataTable({
+			jQuery('.wp-list-table').DataTable({
 				"order": [[ 1, "desc" ]],
 				dom: 'Bfrtip',
 				buttons: [

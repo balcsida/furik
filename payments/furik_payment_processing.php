@@ -1,4 +1,48 @@
 <?php
+/**
+ * Verify reCAPTCHA v3 token
+ *
+ * @param string $token The reCAPTCHA token from the client
+ * @return array|false Returns array with success and score, or false on error
+ */
+function furik_verify_recaptcha( $token ) {
+	global $furik_recaptcha_secret_key;
+
+	if ( empty( $furik_recaptcha_secret_key ) || empty( $token ) ) {
+		return false;
+	}
+
+	$verify_url = 'https://www.google.com/recaptcha/api/siteverify';
+
+	$response = wp_remote_post( $verify_url, array(
+		'body' => array(
+			'secret' => $furik_recaptcha_secret_key,
+			'response' => $token,
+			'remoteip' => $_SERVER['REMOTE_ADDR']
+		)
+	));
+
+	if ( is_wp_error( $response ) ) {
+		error_log( 'Furik reCAPTCHA error: ' . $response->get_error_message() );
+		return false;
+	}
+
+	$body = wp_remote_retrieve_body( $response );
+	$result = json_decode( $body, true );
+
+	if ( ! isset( $result['success'] ) || ! $result['success'] ) {
+		error_log( 'Furik reCAPTCHA verification failed: ' . print_r( $result, true ) );
+		return false;
+	}
+
+	return array(
+		'success' => true,
+		'score' => isset( $result['score'] ) ? floatval( $result['score'] ) : 0.0,
+		'action' => isset( $result['action'] ) ? $result['action'] : '',
+		'challenge_ts' => isset( $result['challenge_ts'] ) ? $result['challenge_ts'] : ''
+	);
+}
+
 function furik_cancel_recurring( $vendor_ref ) {
 	global $furik_payment_merchant;
 
@@ -14,7 +58,15 @@ function furik_cancel_recurring( $vendor_ref ) {
 	$trx->runCardCancel();
 }
 /**
- * Processes IPN messages from Simple
+ * Processes IPN messages from SimplePay
+ * 
+ * This function handles various payment statuses from SimplePay IPN:
+ * - FINISHED: Successful charge
+ * - AUTHORISED: Two-step payment authorization  
+ * - REFUND: Refund of charged amount
+ * - REVERSED: Two-step payment release
+ * - CANCELLED: Interrupted payment
+ * - TIMEOUT: Timeout case
  */
 function furik_process_ipn() {
 	require_once 'SimplePayV21.php';
@@ -26,10 +78,88 @@ function furik_process_ipn() {
 
 	if ( $trx->isIpnSignatureCheck( $json ) ) {
 		$content = json_decode( $trx->checkOrSetToJson( $json ), true );
-		furik_update_transaction_status( $content['orderRef'], FURIK_STATUS_IPN_SUCCESSFUL, $content['transactionId'] );
+		
+		// Map SimplePay IPN status to Furik status
+		$furik_status = FURIK_STATUS_UNKNOWN; // Default to unknown
+		
+		if ( isset( $content['status'] ) ) {
+			switch ( $content['status'] ) {
+				case 'FINISHED':
+					// Only update to successful if not already in a final state
+					$current_transaction = furik_get_transaction( $content['orderRef'] );
+					if ( $current_transaction && 
+					     $current_transaction->transaction_status != FURIK_STATUS_SUCCESSFUL &&
+					     $current_transaction->transaction_status != FURIK_STATUS_IPN_SUCCESSFUL ) {
+						$furik_status = FURIK_STATUS_IPN_SUCCESSFUL;
+						// Send confirmation email for successful payment
+						furik_send_email_for_order( $content['orderRef'] );
+					}
+					break;
+					
+				case 'AUTHORISED':
+					// For two-step payments - could be treated as successful or pending
+					// Using IPN_SUCCESSFUL as it indicates the authorization was successful
+					$furik_status = FURIK_STATUS_IPN_SUCCESSFUL;
+					break;
+					
+				case 'CANCELLED':
+					$furik_status = FURIK_STATUS_CANCELLED;
+					break;
+					
+				case 'TIMEOUT':
+					// Timeout is similar to cancelled - payment didn't complete
+					$furik_status = FURIK_STATUS_CANCELLED;
+					break;
+					
+				case 'REFUND':
+					// Log the refund but don't change the original transaction status
+					// You might want to add a separate refund tracking mechanism
+					furik_transaction_log( $content['orderRef'], 'IPN Refund notification received' );
+					// Don't update the main transaction status for refunds
+					$furik_status = null;
+					break;
+					
+				case 'REVERSED':
+					// For reversed two-step payments
+					$furik_status = FURIK_STATUS_UNSUCCESSFUL;
+					break;
+					
+				default:
+					// Unknown status - log it but don't update
+					furik_transaction_log( $content['orderRef'], 'Unknown IPN status received: ' . $content['status'] );
+					$furik_status = null;
+					break;
+			}
+			
+			// Update transaction status if we have a valid status to set
+			if ( $furik_status !== null ) {
+				furik_update_transaction_status( 
+					$content['orderRef'], 
+					$furik_status, 
+					isset( $content['transactionId'] ) ? $content['transactionId'] : ''
+				);
+			}
+			
+			// Log the IPN message for debugging
+			furik_transaction_log( 
+				$content['orderRef'], 
+				'IPN received with status: ' . $content['status'] . ' - Full content: ' . $json 
+			);
+		}
+		
+		// Always confirm IPN receipt to SimplePay
 		$trx->runIpnConfirm();
 		die();
 	}
+	
+	// If signature check fails, log it
+	if ( isset( $content['orderRef'] ) ) {
+		furik_transaction_log( $content['orderRef'], 'IPN signature verification failed' );
+	}
+	
+	// Return 400 Bad Request for invalid IPN
+	http_response_code( 400 );
+	die( 'Invalid IPN' );
 }
 
 /**
@@ -85,40 +215,98 @@ function furik_process_payment() {
  * Prepares an automatic redirect link to SimplePay with the posted data
  */
 function furik_process_payment_form() {
-	global $wpdb, $furik_name_order_eastern, $furik_production_system;
+	global $wpdb, $furik_name_order_eastern, $furik_production_system,
+	       $furik_recaptcha_enabled, $furik_recaptcha_threshold;
 
-	if ( ! $_POST['furik_form_accept'] ) {
+	if ( ! isset( $_POST['furik_form_accept'] ) || ! $_POST['furik_form_accept'] ) {
 		_e( 'Please accept the data transmission agreement.', 'furik' );
 		die();
 	}
 
+	// Verify reCAPTCHA if enabled
+	$recaptcha_score = null;
+	if ( $furik_recaptcha_enabled ) {
+		$recaptcha_token = isset( $_POST['furik_recaptcha_token'] ) ? sanitize_text_field( $_POST['furik_recaptcha_token'] ) : '';
+
+		if ( empty( $recaptcha_token ) ) {
+			wp_die(
+				__( 'Security verification failed. Please enable JavaScript and try again.', 'furik' ),
+				__( 'Verification Failed', 'furik' ),
+				array( 'response' => 400 )
+			);
+		}
+
+		$recaptcha_result = furik_verify_recaptcha( $recaptcha_token );
+
+		if ( ! $recaptcha_result ) {
+			wp_die(
+				__( 'Security verification failed. Please try again later.', 'furik' ),
+				__( 'Verification Failed', 'furik' ),
+				array( 'response' => 400 )
+			);
+		}
+
+		$recaptcha_score = $recaptcha_result['score'];
+
+		// Check if score is below threshold
+		if ( $recaptcha_score < $furik_recaptcha_threshold ) {
+			// Log suspicious activity
+			error_log( sprintf(
+				'Furik: Low reCAPTCHA score detected. Score: %f, Threshold: %f, IP: %s, Email: %s',
+				$recaptcha_score,
+				$furik_recaptcha_threshold,
+				$_SERVER['REMOTE_ADDR'],
+				isset( $_POST['furik_form_email'] ) ? $_POST['furik_form_email'] : 'unknown'
+			));
+
+			// Challenge the user - show a friendly message
+			wp_die(
+				sprintf(
+					__( 'We need to verify that you are human. Your verification score (%s) is below our threshold (%s). This might happen if you are using a VPN, privacy tools, or automated software. Please try again, or contact us directly if you continue to have issues.', 'furik' ),
+					number_format( $recaptcha_score, 2 ),
+					number_format( $furik_recaptcha_threshold, 2 )
+				),
+				__( 'Additional Verification Required', 'furik' ),
+				array(
+					'response' => 403,
+					'back_link' => true
+				)
+			);
+		}
+	}
+
 	$amount_field = 'furik_form_amount';
-	if ( $_POST['furik_form_amount'] == 'other' ) {
+	if ( isset( $_POST['furik_form_amount'] ) && $_POST['furik_form_amount'] == 'other' ) {
 		$amount_field = 'furik_form_amount_other';
 	}
 
-	$amount = is_numeric( $_POST[ $amount_field ] ) && $_POST[ $amount_field ] > 0 ? $_POST[ $amount_field ] : die( 'Error: amount is not a number.' );
+	$amount = ( isset( $_POST[ $amount_field ] ) && is_numeric( $_POST[ $amount_field ] ) && $_POST[ $amount_field ] > 0 ) ? $_POST[ $amount_field ] : die( 'Error: amount is not a number.' );
+
 	if ( ! furik_extra_field_enabled( 'name_separation' ) ) {
-		$name = $_POST['furik_form_name'];
+		$name = isset( $_POST['furik_form_name'] ) ? $_POST['furik_form_name'] : '';
+		$first_name = '';
+		$last_name = '';
 	} else {
-		$first_name = $_POST['furik_form_first_name'];
-		$last_name  = $_POST['furik_form_last_name'];
+		$first_name = isset( $_POST['furik_form_first_name'] ) ? $_POST['furik_form_first_name'] : '';
+		$last_name  = isset( $_POST['furik_form_last_name'] ) ? $_POST['furik_form_last_name'] : '';
 
 		$name = $furik_name_order_eastern ? "$last_name $first_name" : "$first_name $last_name";
 	}
-	$anon  = $_POST['furik_form_anon'] ? 1 : 0;
-	$email = $_POST['furik_form_email'];
 
+	$anon  = isset( $_POST['furik_form_anon'] ) && $_POST['furik_form_anon'] ? 1 : 0;
+	$email = isset( $_POST['furik_form_email'] ) ? $_POST['furik_form_email'] : '';
+
+	$phone_number = '';
 	if ( furik_extra_field_enabled( 'phone_number' ) ) {
-		$phone_number = $_POST['furik_form_phone_number'];
+		$phone_number = isset( $_POST['furik_form_phone_number'] ) ? $_POST['furik_form_phone_number'] : '';
 	}
 
-	$message     = $_POST['furik_form_message'];
-	$campaign_id = is_numeric( $_POST['furik_campaign'] ) ? $_POST['furik_campaign'] : 0;
+	$message     = isset( $_POST['furik_form_message'] ) ? $_POST['furik_form_message'] : '';
+	$campaign_id = ( isset( $_POST['furik_campaign'] ) && is_numeric( $_POST['furik_campaign'] ) ) ? $_POST['furik_campaign'] : 0;
 	$campaign    = $campaign_id > 0 ? get_post( $campaign_id ) : null;
 	$type        = furik_numr( 'furik_form_type' );
 	$recurring   = furik_numr( 'furik_form_recurring' );
-	$newsletter  = $_POST['furik_form_newsletter'] ? 1 : 0;
+	$newsletter  = isset( $_POST['furik_form_newsletter'] ) && $_POST['furik_form_newsletter'] ? 1 : 0;
 
 	if ( $recurring ) {
 		if ( $type == 0 ) {
@@ -146,6 +334,7 @@ function furik_process_payment_form() {
 			'campaign'          => $campaign_id,
 			'recurring'         => $recurring,
 			'newsletter_status' => $newsletter,
+			'recaptcha_score'   => $recaptcha_score,
 		)
 	);
 
@@ -345,6 +534,14 @@ function furik_prepare_simplepay_redirect( $local_id, $transactionId, $campaign,
 	$parent_id = $local_id;
 
 	if ( isset( $returnData['tokens'] ) ) {
+		// Get the parent transaction's reCAPTCHA score to copy to future transactions
+		$parent_recaptcha_score = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT recaptcha_score FROM {$wpdb->prefix}furik_transactions WHERE id = %d",
+				$parent_id
+			)
+		);
+
 		foreach ( $returnData['tokens'] as $token ) {
 			$time = strtotime( '+1 month', $time );
 
@@ -357,11 +554,12 @@ function furik_prepare_simplepay_redirect( $local_id, $transactionId, $campaign,
 					'name'               => $name,
 					'email'              => $email,
 					'amount'             => $amount,
-					'campaign'           => $campaign,
+					'campaign'           => $campaign ? $campaign->ID : 0,
 					'parent'             => $parent_id,
 					'token'              => $token,
 					'transaction_status' => FURIK_STATUS_FUTURE,
 					'token_validity'     => date( 'Y-m-d H:i:s', $token_validity ),
+					'recaptcha_score'    => $parent_recaptcha_score, // Copy parent's reCAPTCHA score
 				)
 			);
 
@@ -384,6 +582,8 @@ function furik_prepare_simplepay_redirect( $local_id, $transactionId, $campaign,
 
 function furik_redirect_to_transfer_page( $transactionId ) {
 	global $furik_payment_transfer_url;
+
+	$campaign_id = furik_get_post_id_from_order_ref( $transactionId );
 	$url_config = array(
 		'campaign_id'     => $campaign_id,
 		'furik_order_ref' => $transactionId,
@@ -398,6 +598,7 @@ function furik_redirect_to_transfer_page( $transactionId ) {
 function furik_redirect_to_thank_you_cash( $transactionId ) {
 	global $furik_payment_cash_url;
 
+	$campaign_id = furik_get_post_id_from_order_ref( $transactionId );
 	$url_config = array(
 		'campaign_id'     => $campaign_id,
 		'furik_order_ref' => $transactionId,
@@ -506,15 +707,15 @@ function furik_send_email_for_order( $order_ref ) {
 
 /**
  * Core function to process recurring payments
- * 
+ *
  * This function handles the actual processing logic and can be used by both
  * the batch tools interface and the cron job
- * 
+ *
  * @param int    $limit          Maximum number of payments to process
  * @param int    $days_threshold Minimum days since last payment
  * @param bool   $dry_run        If true, only simulate processing without actual API calls
  * @param string $return_type    'html' for HTML output, 'array' for data return
- * 
+ *
  * @return array|string          Processing results (HTML or array depending on return_type)
  */
 function furik_process_recurring_payments($limit = 10, $days_threshold = 25, $dry_run = false, $return_type = 'array') {
@@ -525,7 +726,7 @@ function furik_process_recurring_payments($limit = 10, $days_threshold = 25, $dr
 
     $limit = min(100, max(1, intval($limit)));
     $days_threshold = max(1, intval($days_threshold));
-    
+
     // Get future recurring payments that are due
     $sql = "SELECT rec.*
         FROM
@@ -538,7 +739,7 @@ function furik_process_recurring_payments($limit = 10, $days_threshold = 25, $dr
         LIMIT " . $limit;
 
     $payments = $wpdb->get_results($sql);
-    
+
     // Initialize counters and results
     $results = array(
         'payments' => array(),
@@ -576,7 +777,7 @@ function furik_process_recurring_payments($limit = 10, $days_threshold = 25, $dr
         );
 
         $payment_result['last_payment'] = $previous_date ?: 'N/A';
-        
+
         if ($previous_date) {
             $time_diff = time() - strtotime($previous_date);
             $days_since_last = round($time_diff / (60 * 60 * 24));
@@ -584,12 +785,12 @@ function furik_process_recurring_payments($limit = 10, $days_threshold = 25, $dr
 
             if ($days_since_last < $days_threshold) {
                 $payment_result['status'] = 'skipped';
-                $payment_result['result'] = sprintf('Last payment was only %1$d days ago (threshold: %2$d days)', 
+                $payment_result['result'] = sprintf('Last payment was only %1$d days ago (threshold: %2$d days)',
                                                   $days_since_last, $days_threshold);
                 $results['totals']['skipped']++;
             } else {
                 $payment_result['status'] = $dry_run ? 'dry_run' : 'processing';
-                
+
                 if (!$dry_run) {
                     try {
                         // Process the payment through SimplePay
@@ -665,26 +866,26 @@ function furik_process_recurring_payments($limit = 10, $days_threshold = 25, $dr
             $payment_result['days_since_last'] = 'N/A';
             $results['totals']['skipped']++;
         }
-        
+
         $results['payments'][] = $payment_result;
     }
-    
+
     // Return data in requested format
     if ($return_type == 'html') {
         return furik_generate_recurring_html_output($results, $limit, $days_threshold, $dry_run);
     }
-    
+
     return $results;
 }
 
 /**
  * Generate HTML output for the recurring payment processing results
- * 
+ *
  * @param array  $results        The processing results
  * @param int    $limit          Maximum payments limit
  * @param int    $days_threshold Minimum days threshold
  * @param bool   $dry_run        Whether this was a dry run
- * 
+ *
  * @return string HTML output
  */
 function furik_generate_recurring_html_output($results, $limit, $days_threshold, $dry_run) {
@@ -708,7 +909,7 @@ function furik_generate_recurring_html_output($results, $limit, $days_threshold,
     foreach ($results['payments'] as $payment) {
         $status_class = '';
         $status_text = '';
-        
+
         switch ($payment['status']) {
             case 'success':
                 $status_class = 'status-success';
@@ -789,7 +990,7 @@ function furik_generate_recurring_html_output($results, $limit, $days_threshold,
     $html .= '<p><a href="' . admin_url('admin.php?page=furik-batch-tools&tab=process_recurring') . '" class="button">' . __('Back to Processing Tool', 'furik') . '</a></p>';
 
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -798,7 +999,7 @@ if ( isset( $_POST['furik_action'] ) && $_POST['furik_action'] == 'process_payme
 	furik_process_payment_form();
 }
 
-if ( isset( $_GET['furik_process_recurring'] ) && ( $_GET['furik_process_recurring'] == $furik_processing_recurring_secret ) ) {
+if ( isset( $_GET['furik_process_recurring'] ) && isset( $furik_processing_recurring_secret ) && ( $_GET['furik_process_recurring'] == $furik_processing_recurring_secret ) ) {
 	furik_process_recurring();
 }
 
