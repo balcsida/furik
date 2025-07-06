@@ -45,8 +45,8 @@ $furik_email_change_sender = false;
 * Get your keys from: https://www.google.com/recaptcha/admin
 */
 $furik_recaptcha_enabled = true;
-$furik_recaptcha_site_key = '6LfmoXErAAAAABAHPFINFrz3lufIVzThWefl7pM7';
-$furik_recaptcha_secret_key = '6LfmoXErAAAAAI5mokIcvPXhi-XsQ0KBf6znN9Cq';
-$furik_recaptcha_threshold = 1.0; // Score threshold (0.0-1.0), lower values are more permissive
+$furik_recaptcha_site_key = 'YOUR_V3_SITE_KEY_HERE';
+$furik_recaptcha_secret_key = 'YOUR_V3_SECRET_KEY_HERE';
+$furik_recaptcha_threshold = 0.5; // Score threshold (0.0-1.0), lower values are more permissive
 
 @require_once 'config_local.php';
