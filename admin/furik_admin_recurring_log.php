@@ -16,7 +16,28 @@ class Recurring_Log_List extends WP_List_Table {
 	}
 
 	public function column_default( $item, $column_name ) {
+		if ( ! isset( $item[ $column_name ] ) || '' === $item[ $column_name ] ) {
+			return '';
+		}
+
 		return esc_html( $item[ $column_name ] );
+	}
+
+	public function column_donor_email( $item ) {
+		if ( empty( $item['donor_email'] ) ) {
+			return '';
+		}
+
+		$email = sanitize_email( $item['donor_email'] );
+		if ( empty( $email ) ) {
+			return '';
+		}
+
+		return sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( 'mailto:' . $email ),
+			esc_html( $email )
+		);
 	}
 
 	public function column_status( $item ) {
@@ -32,17 +53,34 @@ class Recurring_Log_List extends WP_List_Table {
 	public static function get_transaction_log( $per_page = 5, $page_number = 1 ) {
 		global $wpdb;
 
+		$per_page    = max( 1, absint( $per_page ) );
+		$page_number = max( 1, absint( $page_number ) );
+		$offset      = ( $page_number - 1 ) * $per_page;
+
+		$log_table          = $wpdb->prefix . 'furik_transaction_log';
+		$transactions_table = $wpdb->prefix . 'furik_transactions';
+
 		$sql = "SELECT
-				*
-				FROM {$wpdb->prefix}furik_transaction_log";
-		if ( ! empty( $_REQUEST['orderby'] ) ) {
-			$sql .= ' ORDER BY ' . esc_sql( $_REQUEST['orderby'] );
-			$sql .= ! empty( $_REQUEST['order'] ) ? ' ' . esc_sql( $_REQUEST['order'] ) : ' ASC';
+				log.*,
+				trx.email AS donor_email
+			FROM {$log_table} AS log
+			LEFT JOIN {$transactions_table} AS trx ON trx.transaction_id = log.transaction_id";
+
+		$orderby_whitelist = array(
+			'transaction_id' => 'log.transaction_id',
+			'time'           => 'log.time',
+			'status'         => 'log.message',
+			'donor_email'    => 'trx.email',
+		);
+
+		if ( ! empty( $_REQUEST['orderby'] ) && isset( $orderby_whitelist[ $_REQUEST['orderby'] ] ) ) {
+			$direction = ( ! empty( $_REQUEST['order'] ) && 'asc' === strtolower( $_REQUEST['order'] ) ) ? 'ASC' : 'DESC';
+			$sql      .= ' ORDER BY ' . $orderby_whitelist[ $_REQUEST['orderby'] ] . ' ' . $direction;
 		} else {
-			$sql .= ' ORDER BY time DESC';
+			$sql .= ' ORDER BY log.time DESC';
 		}
-		$sql .= " LIMIT $per_page";
-		$sql .= ' OFFSET ' . ( $page_number - 1 ) * $per_page;
+
+		$sql .= $wpdb->prepare( ' LIMIT %d OFFSET %d', $per_page, $offset );
 
 		$result = $wpdb->get_results( $sql, 'ARRAY_A' );
 		return $result;
@@ -65,6 +103,7 @@ class Recurring_Log_List extends WP_List_Table {
 			'transaction_id' => __( 'ID', 'furik' ),
 			'time'           => __( 'Time', 'furik' ),
 			'status'         => __( 'Status', 'furik' ),
+			'donor_email'    => __( 'Email', 'furik' ),
 		);
 
 		return $columns;
@@ -75,6 +114,7 @@ class Recurring_Log_List extends WP_List_Table {
 			'transaction_id' => array( 'ID', 'furik' ),
 			'time'           => array( 'time', true ),
 			'status'         => array( 'status', false ),
+			'donor_email'    => array( 'donor_email', false ),
 		);
 
 		return $sortable_columns;
